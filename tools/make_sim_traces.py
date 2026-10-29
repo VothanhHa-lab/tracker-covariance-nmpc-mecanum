@@ -98,16 +98,16 @@ def fig_traj(out, dst):
 
 def fig_ts(out, mp, dst):
     sc_sel = [("H4_occlusion", "H4 occlusion"), ("H5_side", "H5 side/overtake")]
-    fig, ax = plt.subplots(3, 2, figsize=(7.0, 5.0), sharex="col")
+    fig, ax = plt.subplots(3, 2, figsize=(7.0, 5.6), sharex="col")
     for col, (sc, lab) in enumerate(sc_sel):
         for m, name, colr, _ in METH:
             r, tr = out[(sc, m)]
             T, R = tr["T"], tr["R"]
-            ax[0, col].plot(T, np.clip(tr["clearance"], None, 4), LS[m], color=colr, lw=1.5, label=name)
-            ax[1, col].plot(T, np.hypot(R[:, 3], R[:, 4]), LS[m], color=colr, lw=1.5)
+            ax[0, col].plot(T, np.clip(tr["clearance"], None, 4), LS[m], color=colr, lw=1.3, label=name)
+            ax[1, col].plot(T, np.hypot(R[:, 3], R[:, 4]), LS[m], color=colr, lw=1.3)
             tm, ym = margin_series(tr, m, mp)
-            ax[2, col].plot(tm, ym, LS[m], color=colr, lw=1.5, drawstyle="steps-post")
-        ax[0, col].axhline(0.5, color="0.4", ls=":", lw=1.5)
+            ax[2, col].plot(tm, ym, LS[m], color=colr, lw=1.3, drawstyle="steps-post")
+        ax[0, col].axhline(0.5, color="0.4", ls=":", lw=1.3, label="0.5-m personal zone" if col == 0 else None)
         ax[0, col].set_title(f"{lab}, seed {SEED}", fontsize=7.5)
         ax[2, col].set_xlabel("Time (s)")
     ax[0, 0].set_ylabel("Clearance (m, clipped at 4)"); ax[1, 0].set_ylabel("Robot speed (m/s)")
@@ -115,8 +115,8 @@ def fig_ts(out, mp, dst):
     for i, a in enumerate(ax.flat):
         a.set_title(f"({'abcdef'[i]})", loc="left", fontsize=7.5)
     h, l = ax[0, 0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", ncol=4, fontsize=7, bbox_to_anchor=(0.5, -0.02))
-    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.legend(h, l, loc="lower center", ncol=3, fontsize=7.5, bbox_to_anchor=(0.5, -0.01), handlelength=3.4, handletextpad=0.8, columnspacing=2.4, labelspacing=0.7, frameon=True)
+    fig.tight_layout(rect=(0, 0.10, 1, 1))
     fig.savefig(dst / "timeseries.pdf"); plt.close(fig)
 
 
@@ -143,29 +143,29 @@ def lateral(R, path):
 
 def fig_tracking(out, mp, dst, vref):
     sc_sel = [("H2_head_on", "H2 head-on"), ("H4_occlusion", "H4 occlusion")]
-    fig, ax = plt.subplots(3, 2, figsize=(7.0, 5.6), sharex="col")
+    fig, ax = plt.subplots(3, 2, figsize=(7.0, 6.0), sharex="col")
     for col, (sc, lab) in enumerate(sc_sel):
         path = path_of(sc)
         Lp = np.sum(np.linalg.norm(np.diff(path, axis=0), axis=1))
         for m, name, colr, _ in METH:
             _, tr = out[(sc, m)]
             T, R = tr["T"], tr["R"]
-            ax[0, col].plot(T, R[:, 0], LS[m], color=colr, lw=1.5, label=name)
-            ax[1, col].plot(T, lateral(R, path), LS[m], color=colr, lw=1.5)
-            ax[2, col].plot(T, np.degrees(R[:, 2]), LS[m], color=colr, lw=1.5)
+            ax[0, col].plot(T, R[:, 0], LS[m], color=colr, lw=1.3, label=name)
+            ax[1, col].plot(T, lateral(R, path), LS[m], color=colr, lw=1.3)
+            ax[2, col].plot(T, np.degrees(R[:, 2]), LS[m], color=colr, lw=1.3)
         Tm = max(out[(sc, m)][1]["T"][-1] for m, *_ in METH)
         tt = np.linspace(0, Tm, 200)
-        ax[0, col].plot(tt, np.minimum(vref * tt, Lp), color="k", ls=(0, (1, 1)), lw=1.5, label="Set point at $v_{\\mathrm{ref}}$")
-        ax[1, col].axhline(0, color="k", ls=(0, (1, 1)), lw=1.5)
-        ax[2, col].axhline(np.degrees(0.0), color="k", ls=(0, (1, 1)), lw=1.5)
+        ax[0, col].plot(tt, np.minimum(vref * tt, Lp), color="k", ls=(0, (1, 1)), lw=1.3, label="Set value (unobstructed motion at $v_{\\mathrm{ref}}$; path $y=0$; heading $0^\\circ$)" if col == 0 else None)
+        ax[1, col].axhline(0, color="k", ls=(0, (1, 1)), lw=1.3)
+        ax[2, col].axhline(np.degrees(0.0), color="k", ls=(0, (1, 1)), lw=1.3)
         ax[0, col].set_title(f"{lab}, seed {SEED}", fontsize=7.5)
         ax[2, col].set_xlabel("Time (s)")
     ax[0, 0].set_ylabel("$X$ (m)"); ax[1, 0].set_ylabel("Lateral deviation (m)"); ax[2, 0].set_ylabel("Heading $\\theta$ (deg)")
     for i, a in enumerate(ax.flat):
         a.set_title(f"({'abcdef'[i]})", loc="left", fontsize=7.5)
     h, l = ax[0, 0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", ncol=3, fontsize=7, bbox_to_anchor=(0.5, -0.02))
-    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    fig.legend(h, l, loc="lower center", ncol=2, fontsize=7.5, bbox_to_anchor=(0.5, -0.01), handlelength=3.4, handletextpad=0.8, columnspacing=2.4, labelspacing=0.7, frameon=True)
+    fig.tight_layout(rect=(0, 0.11, 1, 1))
     fig.savefig(dst / "tracking.pdf"); plt.close(fig)
 
 
