@@ -1,15 +1,15 @@
-"""Môi trường mô phỏng cho nghiên cứu mô phỏng (bài Sensors, phương án A).
+"""Simulation environment of the simulation study (Sensors paper).
 
-Khác với sim.py (chỉ để kiểm thử phần mềm), mô-đun này mô hình hóa:
-- robot: động học Mecanum, khâu vận tốc bậc nhất với hằng số thời gian THẬT ngẫu nhiên theo hạt
-  (sai khác với mô hình của bộ điều khiển), trễ chấp hành, bão hòa tốc độ bánh và ω;
-- định vị: sai số AR(1) theo tư thế;
-- người: đi theo điểm mốc với nhiễu vận tốc Ornstein–Uhlenbeck, tốc độ ngẫu nhiên, tùy chọn né robot
-  (lực xã hội đơn giản);
-- cảm biến: LiDAR 360° và camera có FOV hữu hạn, tầm đo, xác suất phát hiện, phát hiện giả, trễ,
-  che khuất bởi vật cản (đường ngắm), nhiễu theo khoảng cách; điểm quét tĩnh của tường/vật cản;
-- lớp dừng cứng trên quét (như scan_stop_guard).
-Mọi tham số nằm trong config/simstudy.yaml, có ghi nguồn (Bảng 5 / datasheet / giả định).
+Unlike sim.py (software tests only), this module models:
+- robot: Mecanum kinematics, first-order velocity loops with TRUE time constants drawn per seed
+  (different from the controller model), actuation delay, saturation of wheel speeds and yaw rate;
+- localisation: AR(1) pose error;
+- people: waypoint following with Ornstein-Uhlenbeck velocity noise, random speed, optional avoidance of the robot
+  (simple social force);
+- sensors: 360-deg LiDAR and a camera with finite FOV, range limits, detection probability, clutter, delay,
+  occlusion by obstacles (line of sight), range-dependent noise; static scan points of walls/obstacles;
+- hard stop on the raw scan (as scan_stop_guard).
+All parameters are in config/simstudy.yaml with their source (Table 5 / data sheet / assumed).
 """
 from __future__ import annotations
 
@@ -25,10 +25,10 @@ from .nmpc import NMPCParams
 from .tracker import Detection, DetectionBatch, SensorModel, Tracker, TrackerParams, cv_matrices
 
 C95 = chi2.ppf(0.95, 2)
-GAMMAS = (1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0)   # hệ số phóng thử khi hiệu chỉnh độ phủ
+GAMMAS = (1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 4.0)   # inflation factors tested when calibrating coverage
 
 
-# --------------------------------------------------------------------------------------------- hình học
+# --------------------------------------------------------------------------------------------- geometry
 def seg_dist(p, a, b):
     ab = b - a
     t = np.clip(np.dot(p - a, ab) / max(np.dot(ab, ab), 1e-12), 0, 1)
@@ -48,7 +48,7 @@ def box(x0, y0, x1, y1):
 
 @dataclass
 class World:
-    segments: list = field(default_factory=list)          # [(a, b)] tường và cạnh vật cản
+    segments: list = field(default_factory=list)          # [(a, b)] walls and obstacle edges
 
     def visible(self, p, q):
         return not any(segments_intersect(p, q, a, b) for a, b in self.segments)
@@ -64,7 +64,7 @@ class World:
         return min((seg_dist(p, a, b) for a, b in self.segments), default=np.inf)
 
 
-# --------------------------------------------------------------------------------------------- người
+# --------------------------------------------------------------------------------------------- pedestrians
 @dataclass
 class Walker:
     waypoints: np.ndarray
@@ -73,8 +73,8 @@ class Walker:
     ou_sigma: float = 0.10
     ou_tau: float = 1.0
     reactive: bool = False
-    sf_A: float = 3.0            # m/s², cường độ lực xã hội với robot (giả định)
-    sf_B: float = 0.5            # m, tầm lực xã hội (giả định)
+    sf_A: float = 3.0            # m/s^2, social-force strength towards the robot (assumed)
+    sf_B: float = 0.5            # m, social-force range (assumed)
     y_bounds: tuple | None = None
     p: np.ndarray = None
     v: np.ndarray = field(default_factory=lambda: np.zeros(2))
@@ -102,9 +102,9 @@ class Walker:
                 return
             d = self.waypoints[self.i] - self.p
         v_des = self.speed * d / max(np.linalg.norm(d), 1e-9)
-        # nhiễu vận tốc Ornstein–Uhlenbeck quanh vận tốc mong muốn
+        # Ornstein-Uhlenbeck velocity noise around the desired velocity
         self.w += -self.w / self.ou_tau * dt + self.ou_sigma * np.sqrt(2 * dt / self.ou_tau) * rng.normal(size=2)
-        # mô hình lực xã hội (Helbing & Molnár): thư giãn về vận tốc mong muốn + đẩy khỏi robot, bất đẳng hướng
+        # social-force model (Helbing & Molnar): relaxation to the desired velocity + anisotropic repulsion from the robot
         acc = (v_des + self.w - self.v) / 0.5
         if self.reactive:
             rel = self.p - robot_xy
@@ -112,7 +112,7 @@ class Walker:
             if dist < 4.0:
                 n = rel / max(dist, 1e-6)
                 e = self.v / max(np.linalg.norm(self.v), 1e-6) if np.linalg.norm(self.v) > 0.05 else v_des / max(np.linalg.norm(v_des), 1e-6)
-                cos_phi = float(-n @ e)                       # robot ở phía trước → cos_phi > 0
+                cos_phi = float(-n @ e)                       # robot ahead -> cos_phi > 0
                 lam = 0.35
                 acc = acc + self.sf_A * np.exp((r_sum - dist) / self.sf_B) * (lam + (1 - lam) * (1 + cos_phi) / 2) * n
         self.v = self.v + acc * dt
@@ -124,9 +124,9 @@ class Walker:
             self.p[1] = np.clip(self.p[1], *self.y_bounds)
 
 
-# --------------------------------------------------------------------------------------------- kịch bản
+# --------------------------------------------------------------------------------------------- scenarios
 def make_scenario(name, rng, reactive=False):
-    """Trả về (world, waypoints robot, walkers, timeout). Robot xuất phát (0,0), hướng +x."""
+    """Return (world, robot waypoints, walkers, timeout). The robot starts at (0,0), heading +x."""
     sp = lambda m: float(np.clip(rng.normal(m, 0.15), 0.6, 1.6))  # noqa: E731
     w = World()
     if name == "H1_crossing":
@@ -137,13 +137,13 @@ def make_scenario(name, rng, reactive=False):
         walkers = [Walker([[xc, -4.0 * side], [xc, 4.0 * side]], s, max(t0, 0.0), reactive=reactive)]
         return w, [[0, 0], [8, 0]], walkers, 40.0
     if name == "H2_head_on":
-        # hành lang rộng 2.6 m (hành lang bệnh viện thường ≥ 2.4 m)
+        # corridor 2.6 m wide (hospital corridors are typically >= 2.4 m)
         w.segments = [(np.array([-1.0, -1.3]), np.array([10.0, -1.3])), (np.array([-1.0, 1.3]), np.array([10.0, 1.3]))]
         y0 = rng.uniform(-0.3, 0.3)
         walkers = [Walker([[9.5, y0], [-1.5, y0]], sp(1.1), rng.uniform(0.0, 1.0), reactive=reactive, y_bounds=(-1.05, 1.05))]
         return w, [[0, 0], [8, 0]], walkers, 40.0
     if name == "H3_narrow":
-        # hành lang 3.0 m, chỗ thắt rộng 1.6 m tại x ∈ [3.5, 4.5]; hai người đi ngược chiều qua chỗ thắt
+        # corridor 3.0 m wide with a 1.6-m opening at x in [3.5, 4.5]; two people walk head-on through it
         H, h = 1.5, 0.8
         w.segments = []
         for sgn in (-1, 1):
@@ -169,15 +169,15 @@ def make_scenario(name, rng, reactive=False):
 SCENARIOS = ["H1_crossing", "H2_head_on", "H3_narrow", "H4_occlusion", "H5_side"]
 
 
-# --------------------------------------------------------------------------------------------- cấu hình
+# --------------------------------------------------------------------------------------------- configuration
 @dataclass
 class SensorSim:
-    model: SensorModel           # mô hình bộ bám dùng (danh định)
+    model: SensorModel           # model used by the tracker (nominal)
     rate: float
     delay: float
     p_detect: float
-    clutter: float               # số phát hiện giả trung bình mỗi lần quét
-    noise_scale: float = 1.0     # nhiễu THẬT = noise_scale × mô hình danh định (kiểm tra độ bền)
+    clutter: float               # mean number of false detections per scan
+    noise_scale: float = 1.0     # TRUE noise = noise_scale x nominal model (robustness check)
 
 
 @dataclass
@@ -190,7 +190,7 @@ class StudyConfig:
     r_person: float = 0.25
     guard_margin: float = 0.30
     footprint: tuple = (0.60, 0.55)
-    reactive: bool = True            # danh định: người né robot (lực xã hội); False = điều kiện xấu nhất
+    reactive: bool = True            # nominal: people avoid the robot (social force); False = worst case
     compensate: bool = True
     sensors_enabled: tuple = ("lidar", "camera")
     delay_scale: float = 1.0
@@ -212,7 +212,7 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
     tracker = Tracker({k: s.model for k, s in sensors.items()}, tp, enabled=cfg.sensors_enabled)
     ref = PathReference(path, refp, heading0=0.0)
     static_all = world.static_points()
-    contact_pts = world.static_points(step=0.02)          # kiểm tra chạm tường theo đúng khung chữ nhật
+    contact_pts = world.static_points(step=0.02)          # wall contact checked against the rectangular footprint
     Lf, Wf = cfg.footprint
     W = wheel_matrix(rp_true)
     x = np.zeros(6)
@@ -230,11 +230,11 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
     guard_steps = 0
     r_sum = rp.radius + cfg.r_person
     while t < timeout:
-        # định vị ước lượng: sai số AR(1)
+        # estimated localisation: AR(1) error
         loc_err = cfg.loc_rho * loc_err + np.sqrt(1 - cfg.loc_rho ** 2) * rng.normal(0, cfg.loc_std)
         est_pose = x[:3] + loc_err
         robot_xy = x[:2]
-        # cảm biến
+        # sensors
         for k, s in sensors.items():
             if t + 1e-9 < next_scan[k]:
                 continue
@@ -263,14 +263,14 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
         for item in [p for p in pending if p[0] <= t + 1e-9]:
             tracker.add(item[1])
             pending.remove(item)
-        # điều khiển 1/dt Hz
+        # control at 1/dt Hz
         if t - last_ctrl >= npar.dt - 1e-9:
             last_ctrl = t
             tracker.step(t)
             est = tracker.estimates(t, compensate=cfg.compensate)
             age = t - tracker.processed_until if np.isfinite(tracker.processed_until) else (0.0 if t < 1.0 else np.inf)
             age = min(age, 0.0) if t < 0.5 else age
-            # điểm tĩnh trong tầm LiDAR có đường ngắm (tọa độ map, từ tư thế ước lượng)
+            # static points within LiDAR range and line of sight (map frame, from the estimated pose)
             if len(static_all):
                 dd = np.linalg.norm(static_all - robot_xy, axis=1)
                 cand = static_all[dd < 4.0]
@@ -281,7 +281,7 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
             xe = np.r_[est_pose, x[3:]]
             rh = ref.horizon(xe[:2], npar.N, npar.dt)
             u, dg = ctrl.step(t, xe, P_r, est, st, rh, age)
-            # lớp dừng cứng trên quét thô
+            # hard stop on the raw scan
             L, Wd = cfg.footprint
             blocked = False
             c, sn = np.cos(x[2]), np.sin(x[2])
@@ -304,7 +304,7 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
                 break
         while u_queue and u_queue[0][0] <= t + 1e-9:
             u_applied = u_queue.pop(0)[1]
-        # bão hòa thật: tốc độ bánh và ω
+        # true saturation: wheel speeds and yaw rate
         wv = W @ u_applied
         sat = np.max(np.abs(wv)) / rp.wheel_speed_max
         ua = u_applied / sat if sat > 1 else u_applied.copy()
@@ -348,7 +348,7 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
                frac_non_nmpc=float(np.mean([g.get("mode") != "nmpc" for g in diags])) if diags else 0.0,
                guard_steps=guard_steps, late_dropped=tracker.stats["late_dropped"],
                tau_true_x=tau_true[0], wall_min=float(min(world.min_dist(p) for p in R[::10, :2])) - rp.radius if world.segments else np.nan)
-    # độ phủ của hiệp phương sai dự báo so với vị trí thật (đánh giá bộ bám trong vòng kín)
+    # coverage of the predicted covariance against the true position (closed-loop tracker evaluation)
     def truth_at(tq):
         i = np.searchsorted(T, tq)
         return Pp[min(i, len(T) - 1)] if i < len(T) else None
@@ -386,6 +386,6 @@ def run_episode(scenario, seed, mp: MethodParams, rp: RobotParams, npar: NMPCPar
         res[f"cov_se_{h}"] = se
         for g in GAMMAS:
             res[f"cov_in_{h}_g{g}"] = n_g[g]
-    if trace is not None:   # chuỗi thời gian cho hình minh họa (không ảnh hưởng kết quả)
+    if trace is not None:   # time series for illustrative figures (does not affect results)
         trace.update(T=T, R=R, Pp=Pp, clearance=dmin_t - r_sum, walls=list(world.segments), diags=diags)
     return res

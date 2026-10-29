@@ -1,4 +1,4 @@
-# Một phát hiện người trong khung cảm biến (header.frame_id của mảng chứa nó)
+# One person detection in the sensor frame (header.frame_id of the containing array)
 float64 range      # m
-float64 bearing    # rad, dương sang trái
-float32 score      # độ tin cậy của bộ phát hiện (LiDAR: 1.0)
+float64 bearing    # rad, positive to the left
+float32 score      # detector confidence (LiDAR: 1.0)

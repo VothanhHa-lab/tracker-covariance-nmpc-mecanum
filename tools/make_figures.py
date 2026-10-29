@@ -1,7 +1,7 @@
-"""Hình cho bài báo, vẽ từ results/ (dữ liệu đo). Lưới mờ, dạng vector, đọc được khi in đen trắng.
+"""Figures for the paper drawn from results/ (measured data). Faint grids, vector output, readable in black and white.
 
-python3 tools/make_figures.py --paper ../paper_sensors            # dữ liệu thật
-python3 tools/make_figures.py --test-out /tmp/x --allow-synthetic  # chỉ kiểm thử
+python3 tools/make_figures.py --paper ../paper_sensors            # real data
+python3 tools/make_figures.py --test-out /tmp/x --allow-synthetic  # tests only
 """
 import argparse
 import json
@@ -115,11 +115,11 @@ if __name__ == "__main__":
     syn = any(synthetic_flags(sn, tk, cl))
     if a.paper:
         if syn:
-            sys.exit("TỪ CHỐI: có kết quả synthetic; không vẽ hình cho bài báo.")
+            sys.exit("REFUSED: synthetic results present; no figures are drawn for the paper.")
         out = a.paper / "figures"
     else:
         if syn and not a.allow_synthetic:
-            sys.exit("có kết quả synthetic; dùng --allow-synthetic với --test-out")
+            sys.exit("synthetic results present; use --allow-synthetic with --test-out")
         out = a.test_out
     out.mkdir(parents=True, exist_ok=True)
     made = []
@@ -129,4 +129,4 @@ if __name__ == "__main__":
     tr_f = RESULTS / f"closed_loop_trials_{a.phase}.csv"
     if cl and tr_f.exists():
         fig_grid(pd.read_csv(tr_f), tk, out); made.append("results_grid.pdf")
-    print("đã vẽ:", made or "không có dữ liệu")
+    print("drawn:", made or "no data")

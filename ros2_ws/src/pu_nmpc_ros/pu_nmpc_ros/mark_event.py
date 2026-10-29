@@ -1,4 +1,4 @@
-"""Bàn phím người vận hành: s = start, i = intervention, a = abort, n = ghi chú, q = thoát."""
+"""Operator keyboard: s = start, i = intervention, a = abort, n = note, q = quit."""
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
@@ -16,10 +16,10 @@ def main():
         if k == "q":
             break
         if k == "n":
-            pub.publish(String(data="note:" + input("ghi chú: ")))
+            pub.publish(String(data="note:" + input("note: ")))
         elif k in KEYS:
             pub.publish(String(data=KEYS[k]))
-            print("đã gửi", KEYS[k])
+            print("sent", KEYS[k])
     node.destroy_node()
     rclpy.shutdown()
 

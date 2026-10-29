@@ -1,15 +1,15 @@
-"""Ràng buộc an toàn theo hiệp phương sai (đóng góp C2) và hai phương án đối chứng.
+"""Covariance-based safety constraint (contribution C2) and the two baseline margins.
 
-Mệnh đề (đặt trong bài, chứng minh ở phụ lục). Giả sử tại bước k vị trí thật của người
-p_h ~ (p̂_h, P_h) và sai số vị trí robot e_r ~ (0, P_r) độc lập, n là vectơ đơn vị được chọn
-chỉ từ các ước lượng (không phụ thuộc giá trị thật). Nếu vị trí robot dự kiến p_r thỏa
+Proposition (stated in the paper, proof in the appendix). Suppose that at step k the true position of the person
+p_h ~ (p_hat_h, P_h) and the robot position error e_r ~ (0, P_r) are independent, and n is a unit vector chosen
+from the estimates only (not from the true values). If the planned robot position p_r satisfies
     n^T (p_r − p̂_h) ≥ d0 + κ(ε) · sqrt(n^T (P_h + P_r) n),
-thì Pr(‖p_r,thật − p_h‖ < d0) ≤ ε, với
-    κ = Φ^{-1}(1 − ε)            nếu các sai số là Gauss (kind="gauss"),
-    κ = sqrt((1 − ε)/ε)          với mọi phân bố có hiệp phương sai đó (Cantelli, kind="cantelli").
-Chứng minh: ‖a‖ ≥ n^T a, rồi áp dụng bất đẳng thức một phía cho biến vô hướng n^T(e_r − e_h).
-Bảo đảm chỉ đúng tới mức hiệp phương sai của bộ bám là đúng (kiểm tra NEES/độ phủ trên dữ liệu
-thật, tools/analyze_tracking.py) và mô hình chuyển động CV đúng trong tầm dự báo.
+then Pr(||p_r,true - p_h|| < d0) <= eps, with
+    kappa = Phi^{-1}(1 - eps)        if the errors are Gaussian (kind="gauss"),
+    kappa = sqrt((1 - eps)/eps)      for any distribution with that covariance (Cantelli, kind="cantelli").
+Proof: ||a|| >= n^T a, then apply the one-sided inequality to the scalar n^T(e_r - e_h).
+The guarantee holds only as far as the tracker covariance is correct (check NEES/coverage on real
+data, tools/analyze_tracking.py) and the constant-velocity model holds over the prediction horizon.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from .tracker import cv_matrices
 
 def kappa(eps: float, kind: str = "gauss") -> float:
     if not 0 < eps < 1:
-        raise ValueError("eps phải trong (0, 1)")
+        raise ValueError("eps must lie in (0, 1)")
     if kind == "gauss":
         return float(norm.ppf(1 - eps))
     if kind == "cantelli":
@@ -30,7 +30,7 @@ def kappa(eps: float, kind: str = "gauss") -> float:
 
 
 def propagate(x, P, dt, N, q):
-    """Dự báo CV của người: tâm [N,2] và hiệp phương sai vị trí [N,2,2] tại k = 1..N."""
+    """Constant-velocity prediction of a person: centres [N,2] and position covariances [N,2,2] at k = 1..N."""
     F, Q = cv_matrices(dt, q)
     C, S = np.zeros((N, 2)), np.zeros((N, 2, 2))
     for k in range(N):
@@ -41,7 +41,7 @@ def propagate(x, P, dt, N, q):
 
 
 def steady_state_cov(dt, q, r_var, n_iter=2000):
-    """Hiệp phương sai hậu nghiệm dừng của bộ lọc CV cập nhật vị trí mỗi dt với nhiễu đẳng hướng r_var (m²)."""
+    """Steady-state posterior covariance of a CV filter updated with positions every dt with isotropic noise r_var (m^2)."""
     F, Q = cv_matrices(dt, q)
     Hm = np.hstack([np.eye(2), np.zeros((2, 2))])
     R = r_var * np.eye(2)
@@ -54,7 +54,7 @@ def steady_state_cov(dt, q, r_var, n_iter=2000):
 
 
 def normals(robot_pred, centers):
-    """Pháp tuyến đơn vị từ người tới vị trí robot dự kiến (điểm tuyến tính hóa)."""
+    """Unit normals from the person to the planned robot position (linearisation point)."""
     d = robot_pred - centers
     n = np.linalg.norm(d, axis=1, keepdims=True)
     fallback = np.array([[1.0, 0.0]])
@@ -68,10 +68,10 @@ def cov_margins(nvec, S, P_r, d0, eps, kind="gauss"):
 
 
 def heuristic_risk(robot_xy, robot_v, person_xy, person_v, robot_heading, person_heading, hp):
-    """Chỉ số rủi ro của bản CA-NMPC, cài đúng như phương trình (27)–(34) để làm đối chứng.
+    """Risk index of the CA-NMPC formulation, implemented as in its Eqs. (27)-(34), used as a baseline.
 
-    Lưu ý: với các trọng số không âm có tổng bằng 1 và các thành phần ≥ 0, sigmoid cho giá trị
-    trong [0.5, σ(1)] ≈ [0.5, 0.73]; điều này được báo cáo nguyên trạng, không chỉnh công thức.
+    Note: with non-negative weights summing to one and non-negative terms, the sigmoid lies in
+    [0.5, sigmoid(1)] ~ [0.5, 0.73]; this is reported as is, the formula is not modified.
     """
     d = np.linalg.norm(np.asarray(person_xy) - np.asarray(robot_xy))
     rho_d = np.exp(-d / hp["d_s"])

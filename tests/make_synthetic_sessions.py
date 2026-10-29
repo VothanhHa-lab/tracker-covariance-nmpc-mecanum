@@ -1,4 +1,4 @@
-"""Sinh phiên CSV TỔNG HỢP (cờ synthetic) để kiểm thử đường ống phân tích. KHÔNG phải dữ liệu thí nghiệm.
+"""Generate SYNTHETIC CSV sessions (synthetic flag) to test the analysis pipeline. NOT experimental data.
 
 python3 tests/make_synthetic_sessions.py <out_dir>
 """
@@ -78,7 +78,7 @@ def trials(root, schedule_csv):
     rows = make("R", 2, 1, 3, scenarios=["H1_crossing", "H2_head_on"])
     pd.DataFrame(rows).to_csv(schedule_csv, index=False)
     smap = {"H1_crossing": "crossing", "H2_head_on": "head_on"}
-    for i, r in enumerate(rows[:-1]):                 # lượt cuối "không chạy" để kiểm tra liệt kê đủ
+    for i, r in enumerate(rows[:-1]):                 # last trial "not run" to test that all trials are listed
         o = run(smap[r["scenario"]], MethodParams(method=r["method"]), SimConfig(seed=100 + i), log=True)
         d = root / r["trial_id"]
         t = o["t"] + 1000.0

@@ -1,10 +1,10 @@
-"""Ground truth từ camera trần cố định với thẻ AprilTag 36h11 (OpenCV ArUco).
+"""Ground truth from a fixed ceiling camera with AprilTag 36h11 tags (OpenCV ArUco).
 
-1. Tư thế camera so với sàn: solvePnP trên các thẻ mốc gắn sàn có tọa độ đo bằng thước/máy đo.
-2. Mỗi thẻ mục tiêu (robot, người): tia qua tâm thẻ cắt mặt phẳng z = chiều cao gắn thẻ (theo ID),
-   tránh sai số thị sai khi thẻ gắn trên vai/mũ người tham gia.
-3. Hướng robot: từ hai góc thẻ robot chiếu xuống cùng mặt phẳng.
-Độ chính xác của hệ này phải được kiểm chứng riêng (giao thức, bước P1) và báo cáo trong bài.
+1. Camera pose relative to the floor: solvePnP on floor tags whose coordinates are measured with tape/laser meter.
+2. Each target tag (robot, person): the ray through the tag centre intersects the plane z = tag height (by ID),
+   which avoids parallax errors when tags are worn on shoulders/caps of participants.
+3. Robot heading: from two corners of the robot tag projected onto the same plane.
+The accuracy of this system must be validated separately (protocol step P1) and reported in the paper.
 """
 import cv2
 import numpy as np
@@ -41,7 +41,7 @@ class GTTagTracker(Node):
     def _floor_pose(self, corners, ids):
         obj, img = [], []
         s = self.cfg["floor_tag_size"] / 2
-        local = np.array([[-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0]])   # thứ tự góc của ArUco
+        local = np.array([[-s, s, 0], [s, s, 0], [s, -s, 0], [-s, -s, 0]])   # ArUco corner order
         for c, i in zip(corners, ids):
             ft = self.cfg["floor_tags"].get(int(i))
             if ft is None:

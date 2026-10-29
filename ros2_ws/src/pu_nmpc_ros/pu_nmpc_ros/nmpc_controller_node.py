@@ -1,7 +1,7 @@
-"""NMPC (cov | fixed | heuristic) chạy ở 1/dt Hz; chỉ gửi lệnh khi /trial/enable = True.
+"""NMPC (cov | fixed | heuristic) running at 1/dt Hz; commands are sent only while /trial/enable = True.
 
-An toàn: dừng có kiểm soát khi tư thế, odom hoặc vệt người quá cũ (watchdog); bộ giải lỗi → phanh.
-Nút dừng khẩn phần cứng là lớp bảo vệ độc lập, không phụ thuộc node này.
+Safety: controlled stop when pose, odometry or person tracks are stale (watchdog); solver failure -> braking.
+The hardware emergency stop is an independent protection layer, not depending on this node.
 """
 import numpy as np
 import rclpy

@@ -1,4 +1,4 @@
-"""Thu dữ liệu nhiễu cảm biến (robot ĐỨNG YÊN, người đi qua các vị trí/khoảng cách theo giao thức P2).
+"""Record sensor-noise data (robot STATIONARY, people walk through positions/ranges as in protocol P2).
 ros2 launch pu_nmpc_ros sensor_noise.launch.py session:=N01
 """
 import os

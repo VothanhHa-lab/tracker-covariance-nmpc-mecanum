@@ -1,4 +1,4 @@
-"""Phát hiện người từ quét LiDAR 2D và từ hộp YOLO + ảnh độ sâu (hàm thuần, kiểm thử được)."""
+"""People detection from 2D LiDAR scans and from YOLO boxes + depth images (pure, testable functions)."""
 from __future__ import annotations
 
 import numpy as np
@@ -6,12 +6,12 @@ import numpy as np
 
 def cluster_scan(ranges, angle_min, angle_inc, jump=0.13, min_pts=3, leg_width=(0.05, 0.35),
                  merge_dist=0.45, r_min=0.3, r_max=8.0, mask=None):
-    """Trả về danh sách (range, bearing) của ứng viên người trong khung LiDAR.
+    """Return a list of (range, bearing) person candidates in the LiDAR frame.
 
-    1. Tách cụm khi hai điểm liền kề cách nhau > jump (m).
-    2. Giữ cụm có ≥ min_pts điểm và bề rộng trong leg_width (một chân hoặc thân người hẹp).
-    3. Gộp các cụm có tâm cách nhau < merge_dist (hai chân) thành một ứng viên.
-    mask: mảng bool cùng độ dài ranges, True = điểm thuộc bản đồ tĩnh (bị bỏ).
+    1. Split clusters where two consecutive points are more than `jump` (m) apart.
+    2. Keep clusters with >= min_pts points and a width within leg_width (one leg or a narrow body).
+    3. Merge clusters whose centres are closer than merge_dist (two legs) into one candidate.
+    mask: bool array of the same length as ranges, True = point of the static map (discarded).
     """
     r = np.asarray(ranges, float)
     a = angle_min + angle_inc * np.arange(len(r))
@@ -55,9 +55,9 @@ def cluster_scan(ranges, angle_min, angle_inc, jump=0.13, min_pts=3, leg_width=(
 
 
 def bbox_to_range_bearing(bbox, depth, fx, fy, cx, cy, shrink=0.4, z_range=(0.3, 8.0)):
-    """Hộp (u1, v1, u2, v2) + ảnh độ sâu (m) → (range, bearing) trong khung thân camera (x tới, y trái).
+    """Box (u1, v1, u2, v2) + depth image (m) -> (range, bearing) in the camera body frame (x forward, y left).
 
-    Lấy trung vị độ sâu trong phần trung tâm của hộp (tỉ lệ `shrink`) để tránh nền phía sau.
+    Uses the median depth over the central part of the box (fraction `shrink`) to avoid the background.
     """
     u1, v1, u2, v2 = bbox
     du, dv = (u2 - u1) * (1 - shrink) / 2, (v2 - v1) * (1 - shrink) / 2
@@ -69,5 +69,5 @@ def bbox_to_range_bearing(bbox, depth, fx, fy, cx, cy, shrink=0.4, z_range=(0.3,
         return None
     z = float(np.median(vals))
     u = (u1 + u2) / 2
-    X = (u - cx) / fx * z               # khung quang học: X phải, Z tới
+    X = (u - cx) / fx * z               # optical frame: X right, Z forward
     return float(np.hypot(X, z)), float(np.arctan2(-X, z))

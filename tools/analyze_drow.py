@@ -1,13 +1,13 @@
-"""Kiểm chứng một phần trên dữ liệu thật công khai: DROW v2 (Beyer và cs., RA-L 2018; giấy phép MIT).
+"""Partial validation on public real data: DROW v2 (Beyer et al., RA-L 2018; MIT licence).
 
-Cảm biến KHÁC robot của bài: SICK S300, 225°, 450 tia, 12,5 Hz, cao 37 cm (RPLIDAR A2 của robot: 360°, 10 Hz).
-Nhãn là vị trí người do người gán tay (r, φ), không phải ground truth độc lập: sai lệch vị trí đo được gồm cả sai
-số gán nhãn. Không có bản đồ tĩnh nên bộ phát hiện chạy không có mặt nạ tĩnh: số phát hiện giả là cận trên.
+The sensor DIFFERS from the robot of the paper: SICK S300, 225 deg, 450 beams, 12.5 Hz, 37 cm high (robot: RPLIDAR A2, 360 deg, 10 Hz).
+Labels are hand-set person positions (r, phi), not an independent ground truth: measured position errors include
+the labelling error. No static map is available, so the detector runs without the static mask: false detections are an upper bound.
 
-Đo bằng chính bộ phát hiện chân của bài (pu_nmpc_core.detect.cluster_scan, tham số mặc định):
-- tỉ lệ phát hiện theo khoảng cách (người đi bộ, nhãn .wp), ghép Hungarian với bán kính 0,5 m;
-- số phát hiện giả mỗi lần quét (không khớp người, xe lăn hay khung tập đi nào);
-- sai lệch hướng tâm và tiếp tuyến của phát hiện so với nhãn → σ_r(r) = a + b·r, σ_b.
+Measured with the leg detector of the paper (pu_nmpc_core.detect.cluster_scan, default parameters):
+- detection rate versus range (walking people, .wp labels), Hungarian matching with a 0.5-m radius;
+- false detections per scan (not matching any person, wheelchair or walker);
+- radial and tangential errors of detections versus labels -> sigma_r(r) = a + b*r, sigma_b.
 
 python3 tools/analyze_drow.py external_data/DROWv2/DROWv2-data  →  results/drow_validation.json
 """
@@ -63,7 +63,7 @@ def analyze(root):
         for line in f.read_text().splitlines():
             parts = line.split(",")
             seq = int(parts[0])
-            if seq not in wp:              # chỉ dùng các lần quét có nhãn
+            if seq not in wp:              # only labelled scans are used
                 continue
             ranges = np.array(parts[2:], float)
             if len(ranges) != N_BEAMS:
@@ -84,7 +84,7 @@ def analyze(root):
             for g in range(len(G)):
                 if g not in matched_g:
                     rows.append(dict(split=split, r=P[g][0], hit=0, dr=np.nan, db=np.nan))
-            # phát hiện còn lại: khớp xe lăn / khung tập đi thì không tính là giả
+            # remaining detections: those matching wheelchairs / walkers are not counted as false
             rest = [d for d in range(len(D)) if d not in used]
             if O and rest:
                 Oxy = polar_to_xy(O)
@@ -117,7 +117,7 @@ def main(root):
     b = rng.choice(fp, (2000, len(fp))).mean(axis=1)
     out["fp_per_scan"] = [float(fp.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))]
     m = hit == 1
-    # σ_r(r): độ lệch chuẩn bền (1,4826·MAD) theo khoảng, rồi khớp a + b·r
+    # sigma_r(r): robust standard deviation (1.4826*MAD) per range bin, then fit a + b*r
     centers, sds = [], []
     for lo, hi in BINS:
         s_ = m & (r >= lo) & (r < hi)

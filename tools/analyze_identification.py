@@ -1,7 +1,7 @@
-"""P3: nhận dạng khâu vận tốc bậc nhất có trễ từ /cmd_vel và vận tốc odometry.
+"""P3: identification of the first-order velocity loops with delay from /cmd_vel and odometry velocities.
 
 python3 tools/analyze_identification.py <data>/I01/csv [<data>/I02/csv ...]
-Khớp trên 2/3 đầu mỗi phiên, kiểm chứng trên 1/3 cuối (không chồng lấn). Ghi results/identification.json.
+Fit on the first 2/3 of each session, validate on the last 1/3 (no overlap). Writes results/identification.json.
 """
 import argparse
 import pathlib
@@ -37,7 +37,7 @@ def main(dirs):
             f = fit_first_order(t[:n], u[:n], y[:n])
             if f is None:
                 continue
-            yh = simulate_first_order(t, u, f["K"], f["tau"], f["delay"])   # mô phỏng toàn phiên, chấm điểm 1/3 cuối
+            yh = simulate_first_order(t, u, f["K"], f["tau"], f["delay"])   # simulate the whole session, score the last 1/3
             e = yh[n:] - y[n:]
             rmse = float(np.sqrt(np.mean(e ** 2)))
             fits.append(dict(**f, val_rmse=rmse, val_nrmse=rmse / max(np.ptp(y[n:]), 1e-9), n_train=n, n_val=len(t) - n))

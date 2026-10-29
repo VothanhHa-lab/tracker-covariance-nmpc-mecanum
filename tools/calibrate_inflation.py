@@ -1,8 +1,8 @@
-"""Hiệu chỉnh hệ số phóng hiệp phương sai γ trên hạt phát triển (results/sim_devcal.csv).
+"""Calibrate the covariance inflation factor gamma on the development seeds (results/sim_devcal.csv).
 
-Quy tắc chốt trước khi chạy chiến dịch revision: γ là giá trị nhỏ nhất trong lưới GAMMAS sao cho độ phủ
-elip 95 % gộp trên mọi lượt dev đạt ≥ 95 % ở cả ba tầm 0, 0.5 và 1 s. Kết quả ghi vào
-config/simstudy.yaml (khối revision) và results/calibration.json.
+Rule fixed before the revision campaign: gamma is the smallest value of the grid GAMMAS for which the pooled coverage
+of the 95 % ellipse over all dev runs reaches >= 95 % at all three horizons 0, 0.5 and 1 s. The result is written to
+config/simstudy.yaml (revision block) and results/calibration.json.
 """
 import json
 import pathlib

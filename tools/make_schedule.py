@@ -1,8 +1,8 @@
-"""Lịch thử ngẫu nhiên hóa có cân bằng (chạy MỘT lần, lưu cả hạt ngẫu nhiên; không sửa sau khi bắt đầu).
+"""Balanced randomised trial schedule (run ONCE, store the random seed; do not modify after the start).
 
 python3 tools/make_schedule.py --phase R --participants 5 --reps 4 --seed 20261101 --out protocol/schedule_R.csv
-Pha D (pilot/phát triển) và pha R (báo cáo) dùng hạt khác nhau; chỉ pha R được báo cáo trong bài.
-Thứ tự phương pháp trong mỗi khối kịch bản xoay vòng theo hình vuông Latin (người tham gia, lặp).
+Phase D (pilot/development) and phase R (reporting) use different seeds; only phase R is reported in the paper.
+The method order within each scenario block rotates as a Latin square (participant, repetition).
 """
 import argparse
 import csv
@@ -42,5 +42,5 @@ if __name__ == "__main__":
         w.writeheader()
         w.writerows(rows)
     n_cell = a.participants * a.reps
-    print(f"{len(rows)} lượt; {n_cell} lượt mỗi ô kịch bản×phương pháp; "
-          f"cận trên 95 % khi 0 va chạm/ô: {1 - 0.05 ** (1 / n_cell):.3f}")
+    print(f"{len(rows)} trials; {n_cell} trials per scenario x method cell; "
+          f"95 % upper bound with 0 contacts per cell: {1 - 0.05 ** (1 / n_cell):.3f}")

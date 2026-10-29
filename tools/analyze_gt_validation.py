@@ -1,8 +1,8 @@
-"""P1: độ chính xác của hệ ground truth — thẻ đặt tại các điểm đã đo (config/gt_validation_points.yaml).
+"""P1: accuracy of the ground-truth system - tags placed at measured points (config/gt_validation_points.yaml).
 
 python3 tools/analyze_gt_validation.py <data>/G01/csv
-YAML: points: {participant_tag_id_as_participant: [x, y, h]} — mỗi lần đặt thẻ tại một điểm ghi một phiên,
-hoặc dùng nhiều thẻ cùng lúc. Ghi results/gt_validation.json.
+YAML: points: {participant_tag_id_as_participant: [x, y, h]} - record one session per tag placement,
+or use several tags at once. Writes results/gt_validation.json.
 """
 import argparse
 import pathlib
@@ -29,12 +29,12 @@ def main(dirs):
             errs.append(dict(point=key, n=len(e), bias=float(np.hypot(g.x.mean() - x, g.y.mean() - y)),
                              std=float(np.std(np.column_stack([g.x, g.y]), axis=0).mean()), rmse=float(np.sqrt(np.mean(e ** 2)))))
     if not errs:
-        print("không có điểm kiểm chứng khớp"); return
+        print("no matching validation points"); return
     rm = np.array([e["rmse"] for e in errs])
     write_json(RESULTS / "gt_validation.json", dict(points=errs, rmse=float(np.sqrt(np.mean(rm ** 2))), max_rmse=float(rm.max()),
                                                    n_points=len(errs),
                                                    provenance=provenance(dirs, synthetic=any(is_synthetic(d) for d in dirs))))
-    print(f"GT RMSE {np.sqrt(np.mean(rm ** 2)):.3f} m trên {len(errs)} điểm")
+    print(f"GT RMSE {np.sqrt(np.mean(rm ** 2)):.3f} m over {len(errs)} points")
 
 
 if __name__ == "__main__":

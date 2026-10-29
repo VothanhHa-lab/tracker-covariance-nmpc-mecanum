@@ -1,4 +1,4 @@
-"""Thí nghiệm bước nhận dạng khâu vận tốc (giao thức P3).
+"""Step experiment to identify the velocity loops (protocol P3).
 ros2 launch pu_nmpc_ros identification.launch.py session:=I01
 """
 import os

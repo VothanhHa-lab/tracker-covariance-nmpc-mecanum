@@ -1,7 +1,7 @@
-"""Mô phỏng vòng kín để KIỂM THỬ PHẦN MỀM (software-in-the-loop).
+"""Closed-loop simulation for SOFTWARE TESTING (software-in-the-loop).
 
-KHÔNG dùng kết quả của mô-đun này làm số liệu trong bài báo. Các tham số cảm biến ở đây là giá
-trị giả định để chạy thử; số liệu báo cáo chỉ lấy từ dữ liệu đo trên robot (tools/analyze_*.py).
+Do NOT use results of this module as numbers in the paper. Its sensor parameters are assumed values
+for testing; reported results come from simstudy.py campaigns or from data measured on the robot (tools/analyze_*.py).
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ class SimSensor:
     rate: float        # Hz
     delay: float       # s
     p_detect: float
-    clutter: float     # số phát hiện giả trung bình mỗi lần quét
+    clutter: float     # mean number of false detections per scan
 
 
 @dataclass
@@ -54,7 +54,7 @@ def default_sensors():
 
 
 SCENARIOS = {
-    # robot đi từ (0,0) tới (8,0); người theo đường gấp khúc
+    # the robot goes from (0,0) to (8,0); the person follows a polyline
     "crossing": dict(path=[[0, 0], [8, 0]], people=[Person([[4.5, -4.0], [4.5, 4.0]], 1.0, 1.0)]),
     "head_on": dict(path=[[0, 0], [8, 0]], people=[Person([[8.5, 0.15], [-1.0, 0.15]], 1.0, 0.5)]),
     "side": dict(path=[[0, 0], [8, 0]], people=[Person([[2.0, 3.5], [3.8, 0.0], [3.8, -3.0]], 1.0, 0.5)]),
@@ -66,7 +66,7 @@ class SimConfig:
     dt_ctrl: float = 0.1
     t_max: float = 25.0
     actuation_delay: float = 0.05
-    tau_true: tuple = (0.18, 0.18, 0.14)      # sai khác mô hình có chủ đích
+    tau_true: tuple = (0.18, 0.18, 0.14)      # deliberate model mismatch
     loc_std: tuple = (0.02, 0.02, 0.01)       # m, m, rad
     r_person: float = 0.25
     compensate: bool = True
@@ -87,9 +87,9 @@ def run(scenario: str, mp: MethodParams, cfg: SimConfig = SimConfig(), rp: Robot
     ref = PathReference(sc["path"], RefParams())
     x = np.zeros(6)
     P_r = np.diag(np.square(cfg.loc_std))
-    pose_hist = []                       # (t, ước lượng tư thế)
-    pending = []                         # (t_đến, batch)
-    u_queue = []                         # (t_áp_dụng, u)
+    pose_hist = []                       # (t, pose estimate)
+    pending = []                         # (t_arrival, batch)
+    u_queue = []                         # (t_apply, u)
     u_applied = np.zeros(3)
     next_scan = {k: 0.0 for k in sensors}
     dt_int = 0.01
@@ -97,7 +97,7 @@ def run(scenario: str, mp: MethodParams, cfg: SimConfig = SimConfig(), rp: Robot
     out = dict(t=[], robot=[], people=[], est=[], diag=[], outcome="timeout")
     last_ctrl = -np.inf
     while t < cfg.t_max:
-        # cảm biến: đo theo tư thế THẬT, gửi kèm tư thế ƯỚC LƯỢNG tại thời điểm đo
+        # sensors: measure at the TRUE pose, send the ESTIMATED pose at measurement time
         est_pose = x[:3] + rng.normal(0, cfg.loc_std)
         pose_hist.append((t, est_pose))
         for k, s in sensors.items():
@@ -122,7 +122,7 @@ def run(scenario: str, mp: MethodParams, cfg: SimConfig = SimConfig(), rp: Robot
         for item in [p for p in pending if p[0] <= t + 1e-9]:
             tracker.add(item[1])
             pending.remove(item)
-        # điều khiển
+        # control
         if t - last_ctrl >= cfg.dt_ctrl - 1e-9:
             last_ctrl = t
             tracker.step(t)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Chiến dịch bổ sung sau phản biện: revision (7 nhánh × 250 lượt, 7 tiến trình), rồi timing (1 tiến trình, máy rảnh).
+# Post hoc campaign: revision (7 arms x 250 runs, 7 processes), then timing (1 process, idle machine).
 cd "$(dirname "$0")"
 L=results/sim_revision_log.txt
 python3 tools/sim_campaign.py --campaign revision >> $L 2>&1

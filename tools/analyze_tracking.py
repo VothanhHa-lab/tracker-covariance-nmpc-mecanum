@@ -1,10 +1,10 @@
-"""P4: đánh giá bộ bám so với ground truth, chạy lại OFFLINE trên phát hiện đã ghi.
+"""P4: tracker evaluation against ground truth, re-run OFFLINE on the recorded detections.
 
 python3 tools/analyze_tracking.py <data>/N01/csv <data>/R001/csv ...
-Cấu hình: fusion / lidar_only / camera_only × bù trễ (on/off). Vì chạy lại trên cùng phát hiện,
-các ablation cảm biến không cần thêm lượt thử với người tham gia.
-Độ phủ elip 95 % được đánh giá ở các tầm h = 0, 0.5, 1.0 s: đây là kiểm chứng trực tiếp giả thiết
-của ràng buộc hiệp phương sai (C2).
+Configurations: fusion / lidar_only / camera_only x delay compensation (on/off). Because they re-run on the same detections,
+sensor ablations need no extra trials with participants.
+Coverage of the 95 % ellipse is evaluated at horizons h = 0, 0.5, 1.0 s: this is the direct check of the assumption
+of the covariance constraint (C2).
 """
 import argparse
 import pathlib
@@ -122,7 +122,7 @@ def summarize(df):
 
 
 def cluster_bootstrap(df, key, n_boot=2000, seed=0):
-    """CI theo cụm phiên: lấy mẫu lại các phiên, tránh coi các bước thời gian tương quan là độc lập."""
+    """Cluster CI over sessions: resample sessions, so correlated time steps are not treated as independent."""
     rng = np.random.default_rng(seed)
     ses = df.session.unique()
     vals = []
@@ -143,7 +143,7 @@ def main(dirs, sensors_yaml, tracker_yaml, q_pred):
                 if df is not None:
                     frames.append(df)
     if not frames:
-        print("không có dữ liệu")
+        print("no data")
         return
     all_ = pd.concat(frames)
     all_.to_csv(RESULTS / "tracking_steps.csv", index=False)

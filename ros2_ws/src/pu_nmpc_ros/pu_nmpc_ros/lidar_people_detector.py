@@ -1,4 +1,4 @@
-"""Quét LiDAR → ứng viên người (PersonDetectionArray, stamp = stamp của quét)."""
+"""LiDAR scan -> person candidates (PersonDetectionArray, stamp = stamp of the scan)."""
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -25,7 +25,7 @@ class LidarPeopleDetector(Node):
                             leg_width=(self.prm["leg_width_min"], self.prm["leg_width_max"]),
                             merge_dist=self.prm["merge_dist"], r_min=self.prm["r_min"], r_max=self.prm["r_max"])
         msg = PersonDetectionArray()
-        msg.header = scan.header            # giữ nguyên stamp đo và frame của LiDAR
+        msg.header = scan.header            # keep the measurement stamp and frame of the LiDAR
         msg.sensor = "lidar"
         msg.detections = [PersonDetection(range=r, bearing=b, score=1.0) for r, b in dets]
         self.pub.publish(msg)

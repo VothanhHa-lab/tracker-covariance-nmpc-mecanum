@@ -1,9 +1,9 @@
-"""P2: mô hình nhiễu, tỉ lệ phát hiện, trễ hiệu dụng của từng cảm biến; q của người đi bộ.
+"""P2: noise model, detection rate and effective delay of each sensor; q of walking people.
 
 python3 tools/analyze_sensor_noise.py --gt-std 0.03 <data>/N01/csv [...]
---gt-std: độ lệch chuẩn vị trí của hệ ground truth đo ở P1 (m), dùng khi ước lượng q.
-Ghi results/sensor_noise.json, results/sensor_noise_bins.csv và config/sensors_identified.yaml
-(không ghi đè config/sensors.yaml; người phụ trách sao chép sau khi kiểm tra).
+--gt-std: position standard deviation of the ground-truth system measured in P1 (m), used when estimating q.
+Writes results/sensor_noise.json, results/sensor_noise_bins.csv and config/sensors_identified.yaml
+(config/sensors.yaml is not overwritten; the person in charge copies it after checking).
 """
 import argparse
 import pathlib
@@ -21,11 +21,11 @@ from pu_nmpc_core import config  # noqa: E402
 from pu_nmpc_core.identification import fit_cv_q, fit_sensor_noise  # noqa: E402
 from pu_nmpc_core.metrics import clopper_pearson  # noqa: E402
 
-MATCH = 0.7    # m, cổng ghép phát hiện ↔ GT
+MATCH = 0.7    # m, matching gate detection <-> GT
 
 
 def truth_in_sensor(det, gt_r, gt_p, mount, tau=0.0, model=None):
-    """Với mỗi lô phát hiện: vị trí thật của từng người trong khung cảm biến tại stamp − tau."""
+    """For each detection batch: true position of each person in the sensor frame at stamp - tau."""
     rows = []
     for st, g in det.groupby("stamp"):
         t = st - tau
@@ -43,13 +43,13 @@ def truth_in_sensor(det, gt_r, gt_p, mount, tau=0.0, model=None):
             q = np.array([cy * q[0] + sy * q[1], -sy * q[0] + cy * q[1]])
             r_, b_ = np.hypot(*q), np.arctan2(q[1], q[0])
             if model is not None and not model.in_fov(b_, r_):
-                continue                 # tỉ lệ phát hiện chỉ tính trong vùng nhìn danh định
+                continue                 # detection rate counted only inside the nominal field of view
             rows.append(dict(stamp=st, participant=pid, r_true=r_, b_true=b_))
     return pd.DataFrame(rows)
 
 
 def match(det, tru):
-    """Ghép tham lam theo khoảng cách Euclid trong khung cảm biến cho từng lô."""
+    """Greedy matching by Euclidean distance in the sensor frame for each batch."""
     out, n_fp = [], 0
     for st, g in det.dropna(subset=["range"]).groupby("stamp"):
         tg = tru[tru.stamp == st]
@@ -91,7 +91,7 @@ def main(dirs, gt_std):
                 continue
             frame = det.frame.iloc[0]
             mount = tuple(TFSeries(tf).lookup(["base_link", frame], np.array([det.stamp.iloc[0]]))[0]) if not tf.empty else (0, 0, 0)
-            # trễ hiệu dụng: τ cực tiểu hóa sai số ghép (người phải di chuyển trong phiên)
+            # effective delay: tau minimising the matching error (people must move during the session)
             grid = np.arange(-0.1, 0.31, 0.02)
             errs = []
             for tau in grid:
@@ -107,7 +107,7 @@ def main(dirs, gt_std):
             continue
         M, TR = pd.concat(M), pd.concat(TR)
         fit = fit_sensor_noise(M.r_true, M.b_true, M.r_meas, M.b_meas)
-        # tỉ lệ phát hiện theo khoảng cách (người thật trong vùng nhìn)
+        # detection rate versus range (real people inside the field of view)
         rec = []
         for lo in np.arange(0.5, 8.0, 1.0):
             sel = (TR.r_true >= lo) & (TR.r_true < lo + 1.0)
@@ -120,7 +120,7 @@ def main(dirs, gt_std):
         for row in fit["table"]:
             bins.append(dict(sensor=sensor, **row))
         ident[sensor] = dict(sigma_r_a=fit["sigma_r_a"], sigma_r_b=fit["sigma_r_b"], sigma_b=fit["sigma_b"])
-    # q của người đi bộ từ quỹ đạo GT
+    # q of walking people from GT trajectories
     for d in dirs:
         gp = load(d, "gt_people")
         for _, g in (gp.groupby("participant") if not gp.empty else []):

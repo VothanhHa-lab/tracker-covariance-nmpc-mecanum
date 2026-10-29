@@ -1,9 +1,9 @@
-"""Quản lý một lượt thử theo lịch đã ngẫu nhiên hóa (tools/make_schedule.py).
+"""Manages one trial according to the randomised schedule (tools/make_schedule.py).
 
-Chạy: ros2 run pu_nmpc_ros trial_manager --ros-args -p trial_id:=R017 -p schedule_csv:=... -p scenarios_yaml:=...
-Người vận hành dùng `mark_event` để gửi: start | intervention | abort | note:<văn bản>.
-Kết quả ghi vào <data_dir>/<trial_id>/trial.json. Kết quả chính được tính lại offline từ ground truth;
-trường `outcome_online` chỉ để đối chiếu.
+Run: ros2 run pu_nmpc_ros trial_manager --ros-args -p trial_id:=R017 -p schedule_csv:=... -p scenarios_yaml:=...
+The operator uses `mark_event` to send: start | intervention | abort | note:<text>.
+Results are written to <data_dir>/<trial_id>/trial.json. The main outcomes are recomputed offline from ground truth;
+the field `outcome_online` is for cross-checking only.
 """
 import csv
 import json
@@ -57,8 +57,8 @@ class TrialManager(Node):
         self.pub_path.publish(path)
         self.pub_id.publish(String(data=self.prm["trial_id"]))
         self.create_timer(0.1, self.tick)
-        self.get_logger().info(f"Lượt {self.prm['trial_id']}: {self.row['scenario']} / {self.row['method']} / "
-                               f"{self.row['participant']} — KIỂM TRA nmpc_controller đang chạy method={self.row['method']}")
+        self.get_logger().info(f"Trial {self.prm['trial_id']}: {self.row['scenario']} / {self.row['method']} / "
+                               f"{self.row['participant']} - CHECK that nmpc_controller runs method={self.row['method']}")
         self._save()
 
     def event_cb(self, msg):
@@ -95,7 +95,7 @@ class TrialManager(Node):
         self.rec["outcome_online"] = outcome
         self.rec["t_end"] = self.get_clock().now().nanoseconds * 1e-9
         self._save()
-        self.get_logger().info(f"Kết thúc: {outcome}")
+        self.get_logger().info(f"Finished: {outcome}")
 
     def _save(self):
         with open(os.path.join(self.out_dir, "trial.json"), "w") as f:

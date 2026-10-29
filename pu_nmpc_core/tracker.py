@@ -1,14 +1,14 @@
-"""Bộ bám người hợp nhất bất đồng bộ LiDAR + RGB-D (đóng góp C1).
+"""Asynchronous LiDAR + RGB-D people tracker (contribution C1).
 
-- Mỗi lô phát hiện mang nhãn thời gian đo (stamp) của cảm biến, không phải thời điểm nhận.
-- Các lô được giữ trong hàng đợi trễ cố định `lag` (≥ trễ lớn nhất của cảm biến) rồi xử lý theo
-  đúng thứ tự stamp; như vậy phép đo đến muộn vẫn được dùng chính xác. Lô đến muộn hơn `lag`
-  bị loại và được đếm (late_dropped).
-- Ước lượng gửi cho bộ điều khiển được dự báo từ stamp đã xử lý tới thời điểm hiện tại, nên trễ
-  cảm biến làm hiệp phương sai lớn lên đúng theo mô hình (bù trễ). Ablation "no_compensation"
-  trả về ước lượng tại stamp cuối.
-- Nhiễu đo theo tọa độ cực của từng cảm biến (sigma_r = a + b·r, sigma_b), nhận dạng từ dữ liệu
-  ground truth (tools/analyze_sensor_noise.py); sai số tư thế robot được cộng vào qua Jacobian.
+- Each detection batch carries the measurement time stamp of its sensor, not the arrival time.
+- Batches are held in a fixed-lag queue `lag` (>= largest sensor delay) and processed in stamp order;
+  late measurements are therefore still used correctly. Batches later than `lag`
+  are dropped and counted (late_dropped).
+- Estimates sent to the controller are predicted from the last processed stamp to the current time, so
+  sensor delay enlarges the covariance as the model prescribes (delay compensation). The "no_compensation"
+  ablation returns the estimates at the last stamp.
+- Polar measurement noise per sensor (sigma_r = a + b*r, sigma_b), identified from ground-truth
+  data (tools/analyze_sensor_noise.py); the robot pose error is added through the Jacobian.
 """
 from __future__ import annotations
 
@@ -24,11 +24,11 @@ from scipy.optimize import linear_sum_assignment
 class SensorModel:
     name: str
     sigma_r_a: float            # m
-    sigma_r_b: float            # m/m (tăng theo khoảng cách)
+    sigma_r_b: float            # m/m (growth with range)
     sigma_b: float              # rad
     fov_half: float | None      # rad; None = 360°
     r_max: float                # m
-    mount: tuple = (0.0, 0.0, 0.0)   # (x, y, yaw) của cảm biến trong base_link
+    mount: tuple = (0.0, 0.0, 0.0)   # (x, y, yaw) of the sensor in base_link
 
     def covariance_polar(self, r):
         return np.diag([(self.sigma_r_a + self.sigma_r_b * r) ** 2, self.sigma_b ** 2])
@@ -42,21 +42,21 @@ class SensorModel:
 
 @dataclass
 class Detection:
-    rng: float                  # m, trong khung cảm biến
-    bearing: float              # rad, trong khung cảm biến
+    rng: float                  # m, in the sensor frame
+    bearing: float              # rad, in the sensor frame
 
 
 @dataclass
 class DetectionBatch:
-    stamp: float                         # s, thời điểm đo
+    stamp: float                         # s, measurement time
     sensor: str
     detections: list
-    robot_pose: tuple                    # (x, y, yaw) trong map tại stamp
+    robot_pose: tuple                    # (x, y, yaw) in map at stamp
     robot_cov: np.ndarray = field(default_factory=lambda: np.zeros((3, 3)))  # cov (x, y, yaw)
 
 
 def to_map(det: Detection, sm: SensorModel, pose, pose_cov):
-    """Phép đo → vị trí trong map và hiệp phương sai 2×2 (cảm biến + tư thế robot)."""
+    """Measurement -> position in map and 2x2 covariance (sensor + robot pose)."""
     xs, ys, yaws = sm.mount
     b = det.bearing + yaws
     q = np.array([xs + det.rng * np.cos(b), ys + det.rng * np.sin(b)])       # trong base_link
@@ -106,9 +106,9 @@ class Track:
 
 @dataclass
 class TrackerParams:
-    q_acc: float = 0.5          # m²/s³, mật độ phổ gia tốc trắng
-    lag: float = 0.20           # s, cửa sổ sắp xếp lại (≥ trễ cảm biến lớn nhất)
-    gate_chi2: float = 9.21     # 99 %, 2 bậc tự do
+    q_acc: float = 0.5          # m^2/s^3, white-acceleration spectral density
+    lag: float = 0.20           # s, re-ordering window (>= largest sensor delay)
+    gate_chi2: float = 9.21     # 99 %, 2 degrees of freedom
     init_vel_std: float = 1.0   # m/s
     confirm_hits: int = 3
     confirm_window: float = 1.0  # s
@@ -116,7 +116,7 @@ class TrackerParams:
     delete_confirmed: float = 1.5
     max_pos_std: float = 1.5    # m
     birth_sensors: tuple = ("lidar", "camera")
-    merge_chi2: float = 5.99    # gộp hai vệt khi d² giữa hai vị trí < ngưỡng (95 %, 2 bậc tự do)
+    merge_chi2: float = 5.99    # merge two tracks when d^2 between positions < threshold (95 %, 2 dof)
 
 
 class Tracker:
@@ -142,7 +142,7 @@ class Tracker:
         heapq.heappush(self._queue, (batch.stamp, next(self._seq), batch))
 
     def step(self, now: float):
-        """Xử lý mọi lô có stamp ≤ now − lag theo thứ tự thời gian."""
+        """Process all batches with stamp <= now - lag in time order."""
         t_proc = now - self.p.lag
         while self._queue and self._queue[0][0] <= t_proc:
             _, _, b = heapq.heappop(self._queue)
@@ -157,7 +157,7 @@ class Tracker:
         Z = [to_map(d, sm, b.robot_pose, b.robot_cov) for d in b.detections]
         for tr in self.tracks:
             tr.predict(b.stamp, self.p.q_acc)
-        # gán bằng Hungarian trên khoảng cách Mahalanobis, có cổng chi-bình phương
+        # Hungarian assignment on Mahalanobis distance with a chi-square gate
         nT, nZ = len(self.tracks), len(Z)
         assigned_z, in_gate = set(), set()
         if nT and nZ:
@@ -179,7 +179,7 @@ class Tracker:
                 assigned_z.add(j)
         if b.sensor in self.p.birth_sensors:
             for j, (z, R) in enumerate(Z):
-                # không sinh vệt mới từ phép đo đã nằm trong cổng của một vệt có sẵn (tránh vệt trùng)
+                # no new track from a measurement already inside the gate of an existing track (avoids duplicates)
                 if j not in assigned_z and j not in in_gate:
                     self._birth(z, R, b)
 
@@ -188,7 +188,7 @@ class Tracker:
         K = tr.P @ H.T @ np.linalg.inv(S)
         tr.x = tr.x + K @ (z - H @ tr.x)
         I_KH = np.eye(4) - K @ H
-        tr.P = I_KH @ tr.P @ I_KH.T + K @ R @ K.T          # dạng Joseph, giữ P đối xứng xác định dương
+        tr.P = I_KH @ tr.P @ I_KH.T + K @ R @ K.T          # Joseph form, keeps P symmetric positive definite
         tr.hits += 1
         tr.last_update = b.stamp
         tr.n_updates[b.sensor] = tr.n_updates.get(b.sensor, 0) + 1
@@ -208,7 +208,7 @@ class Tracker:
         self.stats["births"] += 1
 
     def _merge(self):
-        """Gộp các vệt trùng (cùng một người do hai cảm biến khởi tạo gần như đồng thời)."""
+        """Merge duplicate tracks (the same person initialised by both sensors almost simultaneously)."""
         self.tracks.sort(key=lambda tr: (-tr.hits, tr.t_created))
         keep = []
         for tr in self.tracks:
@@ -244,9 +244,9 @@ class Tracker:
 
     # ------------------------------------------------------------------ output
     def estimates(self, now: float, compensate: bool = True):
-        """Danh sách ước lượng của các vệt đã xác nhận.
+        """Estimates of the confirmed tracks.
 
-        compensate=True: dự báo tới `now` (bù trễ). False: giữ tại thời điểm vệt (ablation).
+        compensate=True: predicted to `now` (delay compensation). False: kept at the track time (ablation).
         """
         out = []
         for tr in self.tracks:

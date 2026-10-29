@@ -1,8 +1,8 @@
-"""Lớp dừng cứng độc lập với NMPC: /cmd_vel_raw → /cmd_vel.
+"""Hard-stop layer independent of the NMPC: /cmd_vel_raw -> /cmd_vel.
 
-Lệnh bị đặt về 0 khi có điểm quét thô nằm trong hình chữ nhật bao robot nới thêm `stop_margin`,
-hoặc khi không nhận được quét trong `scan_timeout` s. Mọi lần kích hoạt được phát lên /guard/active
-(được ghi vào bag và báo cáo). Đây là lớp phần mềm; e-stop phần cứng vẫn là lớp bảo vệ cuối.
+The command is set to zero when a raw scan point lies inside the robot rectangle enlarged by `stop_margin`,
+or when no scan has arrived for `scan_timeout` s. Every activation is published on /guard/active
+(recorded in the bag and reported). This is a software layer; the hardware e-stop remains the last protection.
 """
 import numpy as np
 import rclpy
@@ -44,7 +44,7 @@ class ScanStopGuard(Node):
         y = self.mount[1] + r[ok] * np.sin(a[ok])
         m = self.prm["stop_margin"]
         inside = (np.abs(x) < self.prm["length"] / 2 + m) & (np.abs(y) < self.prm["width"] / 2 + m)
-        # loại điểm thuộc chính thân robot (nằm trong hình chữ nhật thân)
+        # discard points on the robot body itself (inside the body rectangle)
         body = (np.abs(x) < self.prm["length"] / 2) & (np.abs(y) < self.prm["width"] / 2)
         self.blocked = bool(np.any(inside & ~body))
         self.t_scan = self.get_clock().now().nanoseconds * 1e-9

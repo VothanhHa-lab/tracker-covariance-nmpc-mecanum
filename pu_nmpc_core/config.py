@@ -1,4 +1,4 @@
-"""Nạp cấu hình YAML thành dataclass của phần lõi."""
+"""Load YAML configuration files into the dataclasses of the core package."""
 from __future__ import annotations
 
 import numpy as np

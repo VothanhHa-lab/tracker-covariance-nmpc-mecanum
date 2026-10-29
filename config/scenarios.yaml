@@ -1,12 +1,12 @@
-# Tọa độ trong khung map của hiện trường — TO_MEASURE: đo trên bản đồ thật sau khi dựng bản đồ (P1).
+# Coordinates in the map frame of the test site - TO_MEASURE on the real map after mapping (P1).
 scenarios:
   H1_crossing:   {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
-                  person: "đi cắt ngang tại x ≈ 4.5 m, xuất phát khi robot qua vạch x = 1 m (đèn hiệu)"}
+                  person: "crosses at x ~ 4.5 m, starts when the robot passes the x = 1 m line (signal light)"}
   H2_head_on:    {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
-                  person: "đi ngược chiều trong hành lang rộng TO_MEASURE m, lệch tâm 0.15 m"}
+                  person: "walks head-on in a corridor of width TO_MEASURE m, 0.15 m off-centre"}
   H3_narrow:     {waypoints: [[0.0, 0.0], [3.0, 0.0], [5.0, 0.0], [8.0, 0.0]], timeout: 45.0, goal_tol: 0.15,
-                  person: "hai người đi ngược chiều qua lối hẹp TO_MEASURE m"}
+                  person: "two people walk head-on through a narrow passage of TO_MEASURE m"}
   H4_occlusion:  {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
-                  person: "bước ra từ sau tủ tại x ≈ 4 m, cách đường đi 1.5 m"}
+                  person: "steps out from behind a cabinet at x ~ 4 m, 1.5 m from the path"}
   H5_side:       {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
-                  person: "tiếp cận từ phía bên/sau robot, ngoài FOV camera (|góc| > 60°)"}
+                  person: "approaches from the side/rear of the robot, outside the camera FOV (|angle| > 60 deg)"}

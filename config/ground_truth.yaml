@@ -1,6 +1,6 @@
-# Hệ ground truth camera trần. TO_MEASURE toàn bộ: vị trí thẻ mốc đo bằng thước/máy đo khoảng cách laser.
+# Ceiling-camera ground-truth system. Everything TO_MEASURE: floor-tag positions measured with tape/laser distance meter.
 ground_truth:
-  floor_tag_size: 0.20          # m, cạnh thẻ mốc (phần đen)
+  floor_tag_size: 0.20          # m, floor-tag edge (black part)
   floor_tags:                   # id: [x, y, yaw] trong khung map
     0: [0.0, 0.0, 0.0]
     1: [4.0, 0.0, 0.0]
@@ -9,6 +9,6 @@ ground_truth:
     4: [8.0, 2.0, 0.0]
   targets:
     10: {kind: robot, height: 0.80, yaw_offset: 0.0}
-    20: {kind: person, participant: 1, height: 1.45}   # thẻ trên mũ/vai; đo chiều cao cho từng người
+    20: {kind: person, participant: 1, height: 1.45}   # tag on cap/shoulder; measure the height for each person
     21: {kind: person, participant: 2, height: 1.45}
     22: {kind: person, participant: 3, height: 1.45}

@@ -1,11 +1,11 @@
-"""Bộ điều khiển: bộ bám → tham số ràng buộc theo phương pháp → NMPC → lệnh vận tốc.
+"""Controller: tracker -> constraint parameters of the chosen method -> NMPC -> velocity command.
 
-Ba phương pháp dùng chung NMPC, chung chi phí và giới hạn bánh; chỉ khác cách tính biên:
-- "cov"       (đề xuất): biên d0 + κ(ε)·σ_n từ hiệp phương sai dự báo của người và robot.
-- "fixed"     : biên d0 + d_fixed, người dự báo bằng trung bình CV.
-- "heuristic" : tái hiện CA-NMPC: d_safe = d0 + k_d·ρ_h và giới hạn tốc độ v0(1 − k_v·ρ_h).
-  Khác bản gốc: bỏ hạng chi phí rào cản 1/(d − d_safe) vì không xác định khi d < d_safe;
-  độ lệch này phải được nêu trong bài.
+All methods share the NMPC, the cost and the wheel limits; they differ only in how the margin is computed:
+- "cov"       (proposed): margin d0 + kappa(eps)*sigma_n from the predicted covariances of person and robot.
+- "fixed"     : margin d0 + d_fixed, person predicted by the CV mean.
+- "heuristic" : reproduction of CA-NMPC: d_safe = d0 + k_d*rho_h and speed limit v0(1 - k_v*rho_h).
+  Deviation from the original: the barrier cost 1/(d - d_safe) is omitted because it is undefined for d < d_safe;
+  this deviation is stated in the paper.
 """
 from __future__ import annotations
 
@@ -21,27 +21,27 @@ from .nmpc import NMPC, NMPCParams
 @dataclass
 class MethodParams:
     method: str = "cov"
-    d0: float = 0.95                 # m, khoảng cách tâm–tâm tối thiểu (r_robot + r_người + khoảng hở)
-    eps: float = 0.01                # mức rủi ro mỗi người, mỗi bước
+    d0: float = 0.95                 # m, minimum centre distance (r_robot + r_person + clearance)
+    eps: float = 0.01                # risk level per person and step
     kappa_kind: str = "gauss"
-    d_fixed: float = 0.30            # m, đệm cố định của phương pháp "fixed"
-    q_acc_pred: float = 0.5          # m²/s³, nhiễu quá trình khi dự báo người (nhận dạng từ dữ liệu GT)
-    sigma_freeze_after: float = 1.0  # s; sau mốc này giữ nguyên σ (bảo đảm chỉ phát biểu cho [0, mốc])
-    const_cov: tuple | None = None   # "ccconst": hiệp phương sai người hằng (4×4, làm phẳng), tính trước
-    cov_inflate: float = 1.0         # hệ số phóng hiệp phương sai người (hiệu chỉnh trên hạt dev; 1 = không phóng)
+    d_fixed: float = 0.30            # m, buffer of the "fixed" method
+    q_acc_pred: float = 0.5          # m^2/s^3, process noise for person prediction (identified from GT data)
+    sigma_freeze_after: float = 1.0  # s; sigma held constant afterwards (guarantee stated only for [0, this time])
+    const_cov: tuple | None = None   # "ccconst": constant person covariance (4x4, flattened), computed in advance
+    cov_inflate: float = 1.0         # person covariance inflation factor (calibrated on dev seeds; 1 = none)
     heuristic: dict = field(default_factory=lambda: dict(
         d_s=1.0, v_rel_max=2.0, w_d=0.5, w_v=0.3, w_t=0.2, k_d=0.8, k_v=0.5))
     max_people: int = 4
     max_static: int = 8
-    static_clearance: float = 0.10   # m, khoảng hở với điểm tĩnh (cộng bán kính robot)
-    static_range: float = 2.5        # m, chỉ xét điểm tĩnh trong bán kính này
-    stale_after: float = 0.5         # s, dữ liệu người cũ hơn → dừng an toàn
+    static_clearance: float = 0.10   # m, clearance to static points (added to the robot radius)
+    static_range: float = 2.5        # m, static points considered only within this radius
+    stale_after: float = 0.5         # s, older person data -> safe stop
 
 
 @dataclass
 class RefParams:
     v_ref: float = 0.6               # m/s
-    heading_mode: str = "fixed"      # "fixed" (giữ hướng ban đầu) hoặc "tangent"
+    heading_mode: str = "fixed"      # "fixed" (keep the initial heading) or "tangent"
     goal_tol: float = 0.15           # m
 
 
@@ -70,7 +70,7 @@ class PathReference:
             t = np.clip(np.dot(p - a, b - a) / max(self.seg_len[i] ** 2, 1e-12), 0, 1)
             d = np.linalg.norm(a + t * (b - a) - p)
             s = self.s_cum[i] + t * self.seg_len[i]
-            if d < best[0] and s >= self.s - 0.5:       # tiến đơn điệu, cho phép lùi nhỏ
+            if d < best[0] and s >= self.s - 0.5:       # monotone progress, small backward moves allowed
                 best = (d, s)
         self.s = max(self.s, best[1])
         return self.s
@@ -135,9 +135,9 @@ class Controller:
             else:
                 raise ValueError(mp.method)
             c[s], n[s], m[s] = Cs, ns, ms
-        # điểm tĩnh gần nhất từ LiDAR (tường, đồ vật), đã loại điểm thuộc người ở node ROS
+        # nearest static LiDAR points (walls, objects); points belonging to people are removed in the ROS node
         if static_pts is not None and len(static_pts):
-            # điểm gần nhất trong mỗi cung góc quanh robot (tránh chọn toàn bộ điểm trên cùng một bức tường)
+            # nearest point in each angular sector around the robot (avoids picking all points on one wall)
             rel = static_pts - x[:2]
             d = np.linalg.norm(rel, axis=1)
             sector = ((np.arctan2(rel[:, 1], rel[:, 0]) + np.pi) / (2 * np.pi) * mp.max_static).astype(int) % mp.max_static
@@ -154,14 +154,14 @@ class Controller:
         return c, n, m, speed_scale, info
 
     def step(self, t, x, P_r, people, static_pts, ref, people_data_age):
-        """Trả về (u, diag). u là vận tốc thân đặt [vx, vy, omega]."""
+        """Return (u, diag). u is the commanded body velocity [vx, vy, omega]."""
         diag = dict(t=t, method=self.mp.method, mode="nmpc", n_people=len(people))
         if people_data_age > self.mp.stale_after:
             diag["mode"] = "stale_stop"
             u = self._brake()
         else:
             x = np.asarray(x, float).copy()
-            # bù trễ chấp hành: lệnh trước đó vẫn đang được thực thi trong khoảng trễ
+            # actuation-delay compensation: the previous command is still being executed during the delay
             if self.np.input_delay > 0:
                 n_sub = max(1, int(round(self.np.input_delay / 0.01)))
                 for _ in range(n_sub):

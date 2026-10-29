@@ -1,6 +1,6 @@
-"""Hình cho nghiên cứu mô phỏng → ../paper_sensors/figures/{scenarios,sim_grid}.pdf.
+"""Figures of the simulation study -> ../paper_sensors/figures/*.pdf.
 
-Lưới mờ, vector, phân biệt bằng hoa văn để in đen trắng. Chỉ đọc results/sim_*.csv (dữ liệu mô phỏng báo cáo).
+Faint grids, vector output, hatching for black-and-white printing. Reads only results/*.csv/json (reported simulation data).
 """
 import argparse
 import json
@@ -72,7 +72,7 @@ def fig_grid(main, rob, abl, out):
     grouped_box(ax[0, 0], main, "min_clearance", "Min. clearance (m)", "(a)")
     grouped_box(ax[0, 1], main, "zone_time", "Time in 0.5-m zone (s)", "(b)")
     grouped_box(ax[0, 2], main[main.outcome == "success"], "time", "Time to goal (s)", "(c)")
-    # (d) độ bền: khoảng hở trung bình ± CI theo điều kiện
+    # (d) robustness: mean clearance +/- CI per condition
     conds = [("nominal", "Nominal", main)]
     if rob is not None:
         conds += [(c, l, rob[rob.condition == c]) for c, l in (("noise2", "Noise ×2"), ("delay15", "Delay ×1.5"), ("nonreactive", "Non-react."))]
@@ -87,7 +87,7 @@ def fig_grid(main, rob, abl, out):
                      edgecolor="k", lw=1.5, capsize=1.5, label=lab)
     ax[1, 0].set_xticks(range(len(conds)), [c[1] for c in conds], fontsize=6.5, rotation=20)
     ax[1, 0].set_ylabel("Mean min. clearance (m)"); ax[1, 0].set_title("(d)", loc="left")
-    # (e) độ phủ elip 95 % theo tầm dự báo
+    # (e) coverage of the 95 % ellipse versus prediction horizon
     hs = [0.0, 0.5, 1.0]
     series = [("Fusion, compensated", main[main.method == "cov"], "-", "o")]
     if abl is not None:
@@ -117,7 +117,7 @@ def fig_grid(main, rob, abl, out):
 
 
 def fig_revision(S, out):
-    """Chiến dịch bổ sung (hạt 3000–3049): khoảng cách và thời gian trong vùng theo thời gian tới đích."""
+    """Post hoc campaign (seeds 3000-3049): clearance and zone time versus time to goal."""
     R = S["revision"]
     fx = [("fixed", "0.30"), ("fix045", "0.45"), ("fix060", "0.60"), ("fix075", "0.75")]
     pts = [("cov", "Covariance", "o", "#1b9e77"), ("covcal", "Covariance, calibrated", "s", "#1b9e77"),
@@ -147,7 +147,7 @@ def fig_revision(S, out):
 
 
 def fig_drow(D, ss, out):
-    """Dữ liệu thật DROW v2: tỉ lệ phát hiện và độ lệch chuẩn sai số khoảng cách theo khoảng cách."""
+    """Real DROW v2 data: detection rate and range-error standard deviation versus range."""
     fig, ax = plt.subplots(1, 2, figsize=(7.0, 2.6))
     keys = list(D["recall_by_range"])
     lo_hi = [tuple(float(x) for x in k.split("-")) for k in keys]
@@ -176,7 +176,7 @@ def load(name):
         return None
     meta = json.loads((RESULTS / f"sim_{name}.meta.json").read_text())
     if meta.get("synthetic"):
-        sys.exit(f"TỪ CHỐI: sim_{name} có cờ synthetic")
+        sys.exit(f"REFUSED: sim_{name} carries the synthetic flag")
     return pd.read_csv(f)
 
 
@@ -204,4 +204,4 @@ if __name__ == "__main__":
     sj = RESULTS / "sim_summary.json"
     if sj.exists() and "revision" in json.loads(sj.read_text()):
         fig_revision(json.loads(sj.read_text()), out)
-    print("đã vẽ:", sorted(p.name for p in out.glob("*.pdf")))
+    print("drawn:", sorted(p.name for p in out.glob("*.pdf")))

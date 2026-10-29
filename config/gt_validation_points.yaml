@@ -1,3 +1,3 @@
-# Điểm kiểm chứng ground truth: khóa "<tên phiên>:<participant id của thẻ>" → [x, y, chiều cao thẻ] (m, khung map).
-# TO_MEASURE bằng thước/máy đo laser; tối thiểu 9 điểm phủ vùng thí nghiệm, 2 chiều cao.
+# Ground-truth validation points: key "<session name>:<participant id of the tag>" -> [x, y, tag height] (m, map frame).
+# TO_MEASURE with tape/laser meter; at least 9 points covering the test area, 2 heights.
 points: {}

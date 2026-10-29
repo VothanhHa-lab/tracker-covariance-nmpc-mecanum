@@ -1,9 +1,9 @@
-"""Phân tích chiến dịch mô phỏng → results/sim_summary.json (kế hoạch chốt trước khi xem kết quả báo cáo).
+"""Analysis of the simulation campaigns -> results/sim_summary.json (plan fixed before seeing the reporting results).
 
-- Tỉ lệ (thành công, va chạm): Clopper–Pearson 95 %; 0 sự kiện → thêm cận trên một phía.
-- Trung bình liên tục: bootstrap percentile 95 % theo lượt (10 000 mẫu).
-- So sánh: ghép cặp theo (kịch bản, hạt), bootstrap 95 %.
-- Độ phủ hiệp phương sai: Σ trong / Σ tổng; CI bootstrap theo lượt.
+- Proportions (success, contacts): Clopper-Pearson 95 %; 0 events -> also the one-sided upper bound.
+- Continuous means: 95 % percentile bootstrap over runs (10 000 resamples).
+- Comparisons: paired by (scenario, seed), 95 % bootstrap.
+- Covariance coverage: sum inside / sum total; bootstrap CI over runs.
 """
 import json
 import pathlib
@@ -91,7 +91,7 @@ def main():
     alt, meta_alt = load("altmain")
     if main_df is not None:
         prov.append(dict(file="sim_main.csv", sha256=sha(RESULTS / "sim_main.csv"), meta=meta))
-        if alt is not None:   # đối chứng ccconst (bổ sung sau), cùng hạt 1000–1099
+        if alt is not None:   # ccconst baseline (added later), same seeds 1000-1099
             prov.append(dict(file="sim_altmain.csv", sha256=sha(RESULTS / "sim_altmain.csv"), meta=meta_alt))
             main_df = pd.concat([main_df, alt], ignore_index=True)
         main_df["method_v"] = main_df.method
@@ -126,7 +126,7 @@ def main():
         out["ablation"]["cov_nominal"] = summarize(base)
     rev, meta = load("revision")
     if rev is not None:
-        # phân tích bổ sung sau phản biện (hạt mới 3000–3049): nhánh = điều kiện nếu khác nominal, ngược lại = phương pháp
+        # post hoc analyses (new seeds 3000-3049): arm = condition if not nominal, otherwise = method
         prov.append(dict(file="sim_revision.csv", sha256=sha(RESULTS / "sim_revision.csv"), meta=meta))
         ar, meta_ar = load("altrev")
         if ar is not None:

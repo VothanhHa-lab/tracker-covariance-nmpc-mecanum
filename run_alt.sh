@@ -1,5 +1,5 @@
 #!/bin/bash
-# Đối chứng ccconst: chờ run_revision.sh xong (kể cả đo thời gian), rồi chạy altmain + altrev, sau đó alttiming 1 tiến trình.
+# CC-const baseline: wait until run_revision.sh has finished (including timing), then run altmain + altrev, then alttiming with 1 process.
 cd "$(dirname "$0")"
 until grep -q "ALL DONE" results/sim_revision_log.txt 2>/dev/null; do sleep 20; done
 L=results/sim_alt_log.txt

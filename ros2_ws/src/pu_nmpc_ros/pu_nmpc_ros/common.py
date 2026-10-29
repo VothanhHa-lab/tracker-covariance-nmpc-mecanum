@@ -1,4 +1,4 @@
-"""Tiện ích dùng chung cho các node."""
+"""Utilities shared by the nodes."""
 import math
 
 import numpy as np
@@ -18,7 +18,7 @@ def tf_to_pose2d(tf):
 
 
 def pose_cov_3x3(cov36):
-    """Trích (x, y, yaw) từ hiệp phương sai 6×6 của PoseWithCovariance."""
+    """Extract (x, y, yaw) from the 6x6 covariance of a PoseWithCovariance."""
     C = np.asarray(cov36, float).reshape(6, 6)
     idx = [0, 1, 5]
     return C[np.ix_(idx, idx)]

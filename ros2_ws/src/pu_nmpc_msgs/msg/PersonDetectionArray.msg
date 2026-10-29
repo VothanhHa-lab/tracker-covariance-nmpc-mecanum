@@ -1,4 +1,4 @@
-# header.stamp = THỜI ĐIỂM ĐO của cảm biến (không phải thời điểm xử lý)
+# header.stamp = MEASUREMENT TIME of the sensor (not the processing time)
 std_msgs/Header header
 string sensor      # "lidar" | "camera"
 PersonDetection[] detections

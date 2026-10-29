@@ -1,4 +1,4 @@
-# Dữ liệu ngoài (DROW v2, ~1,2 GB): tải lại theo README
+# External data (DROW v2, ~1.2 GB): download again as described in README
 external_data/
 __pycache__/
 *.pyc

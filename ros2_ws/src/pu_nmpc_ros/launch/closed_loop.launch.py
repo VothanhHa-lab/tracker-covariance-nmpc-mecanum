@@ -1,6 +1,6 @@
-"""Một lượt vòng kín. Ví dụ:
+"""One closed-loop trial. Example:
 ros2 launch pu_nmpc_ros closed_loop.launch.py trial_id:=R017 method:=cov schedule:=~/pu_nmpc/protocol/schedule.csv
-Driver cảm biến, định vị (AMCL/robot_localization) và cầu nối động cơ được khởi động riêng (bringup của robot).
+Sensor drivers, localisation (AMCL/robot_localization) and the motor bridge are started separately (robot bringup).
 """
 import os
 import sys

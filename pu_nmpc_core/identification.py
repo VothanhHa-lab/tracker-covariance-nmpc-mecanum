@@ -1,9 +1,9 @@
-"""Nhận dạng tham số từ dữ liệu đo (đóng góp C3).
+"""Parameter identification from measured data (contribution C3).
 
-1. Khâu vận tốc bậc nhất có trễ thuần: y(t) = K·u(t − d) lọc qua 1/(τs + 1), cho từng trục thân.
-   Ước lượng (K, τ, d) bằng bình phương tối thiểu trên lưới d, kiểm chứng trên đoạn riêng.
-2. Mô hình nhiễu của cảm biến phát hiện người: sigma_r = a + b·r, sigma_b, độ lệch hệ thống
-   theo khoảng cách. Dùng phép đo đã ghép với ground truth.
+1. First-order velocity loop with pure delay: y(t) = K*u(t - d) filtered by 1/(tau*s + 1), per body axis.
+   (K, tau, d) estimated by least squares over a grid of d, validated on a separate segment.
+2. Noise model of a people-detection sensor: sigma_r = a + b*r, sigma_b, and the systematic bias
+   versus range, from measurements matched to ground truth.
 """
 from __future__ import annotations
 
@@ -21,9 +21,9 @@ def simulate_first_order(t, u, K, tau, delay):
 
 
 def fit_first_order(t, u, y, delays=np.arange(0.0, 0.31, 0.01), y0=None):
-    """Khớp (K, τ, d) cho mô hình rời rạc y[i] = a·y[i−1] + b·u(t[i−1] − d).
+    """Fit (K, tau, d) for the discrete model y[i] = a*y[i-1] + b*u(t[i-1] - d).
 
-    Giả thiết bước lấy mẫu gần đều; trả về dict có RMSE trên chính dữ liệu khớp.
+    Assumes nearly uniform sampling; returns a dict including the RMSE on the fitted data.
     """
     t, u, y = map(lambda v: np.asarray(v, float), (t, u, y))
     dt = float(np.median(np.diff(t)))
@@ -52,10 +52,10 @@ def validate_first_order(t, u, y, fit):
 
 
 def fit_sensor_noise(r_true, b_true, r_meas, b_meas, bins=np.arange(0.5, 8.01, 0.5)):
-    """Mô hình nhiễu cực của một cảm biến.
+    """Polar noise model of one sensor.
 
-    Trả về tham số (a, b, sigma_b) và bảng theo khoảng cách. Độ lệch chuẩn dùng ước lượng bền
-    1.4826·MAD sau khi trừ độ lệch hệ thống của từng ô.
+    Returns the parameters (a, b, sigma_b) and a table by range. Standard deviations use the robust
+    estimate 1.4826*MAD after removing the systematic bias of each bin.
     """
     r_true, b_true, r_meas, b_meas = map(lambda v: np.asarray(v, float), (r_true, b_true, r_meas, b_meas))
     er = r_meas - r_true
@@ -84,10 +84,10 @@ def fit_sensor_noise(r_true, b_true, r_meas, b_meas, bins=np.arange(0.5, 8.01, 0
 
 
 def fit_cv_q(t, xy, r_meas, q_grid=np.geomspace(0.01, 5.0, 60)):
-    """Ước lượng hợp lý cực đại mật độ phổ gia tốc q của mô hình CV từ quỹ đạo người (ground truth).
+    """Maximum-likelihood estimate of the acceleration spectral density q of the CV model from pedestrian (GT) trajectories.
 
-    t [T], xy [T,2] của MỘT người, r_meas: phương sai nhiễu đo của hệ ground truth (m²).
-    Trả về q tốt nhất và log-likelihood trên lưới. Ghép nhiều người: cộng log-likelihood.
+    t [T], xy [T,2] of ONE person, r_meas: measurement-noise variance of the ground-truth system (m^2).
+    Returns the best q and the log-likelihood over the grid. For several people, add the log-likelihoods.
     """
     from .tracker import H, cv_matrices
     t, xy = np.asarray(t, float), np.asarray(xy, float)

@@ -1,4 +1,4 @@
-"""Tiện ích chung cho công cụ phân tích: nguồn gốc dữ liệu (provenance) và đọc phiên."""
+"""Shared utilities of the analysis tools: data provenance and session loading."""
 from __future__ import annotations
 
 import hashlib
@@ -27,7 +27,7 @@ def code_hash() -> str:
 
 
 def provenance(inputs, synthetic=False, extra=None):
-    """Mỗi tệp kết quả mang theo: tệp đầu vào + mã băm, mã băm mã nguồn, cờ synthetic."""
+    """Each result file carries: input files + hashes, source-code hash, synthetic flag."""
     files = []
     for p in inputs:
         p = pathlib.Path(p)
@@ -53,7 +53,7 @@ def load(csv_dir: pathlib.Path, name: str) -> pd.DataFrame:
 
 
 def interp_pose(df: pd.DataFrame, t, max_gap=0.2):
-    """Nội suy tư thế (x, y, yaw) tại các thời điểm t; NaN nếu khoảng trống dữ liệu > max_gap."""
+    """Interpolate the pose (x, y, yaw) at times t; NaN where the data gap exceeds max_gap."""
     df = df.sort_values("stamp")
     st = df.stamp.values
     out = np.column_stack([np.interp(t, st, df.x.values), np.interp(t, st, df.y.values),

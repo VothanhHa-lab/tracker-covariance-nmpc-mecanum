@@ -1,7 +1,7 @@
-"""Bộ bám hợp nhất bất đồng bộ (bọc pu_nmpc_core.tracker.Tracker).
+"""Asynchronous fusion tracker (wraps pu_nmpc_core.tracker.Tracker).
 
-Với mỗi lô phát hiện: tra TF map←base_link TẠI stamp đo, kèm hiệp phương sai tư thế mới nhất,
-đưa vào hàng đợi trễ. Bộ hẹn giờ 20 Hz xử lý hàng đợi và phát ước lượng (bù trễ hoặc không).
+For each detection batch: look up TF map<-base_link AT the measurement stamp, attach the latest pose covariance,
+and put it in the lag queue. A 20-Hz timer processes the queue and publishes estimates (compensated or not).
 """
 import numpy as np
 import rclpy

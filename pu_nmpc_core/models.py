@@ -1,12 +1,12 @@
-"""Mô hình robot Mecanum dùng cho dự báo trong NMPC.
+"""Mecanum robot model used for prediction in the NMPC.
 
-Bộ điều khiển bánh (STM32) nhận tốc độ bánh đặt, nên mô hình dự báo là động học Mecanum
-cộng một khâu quán tính bậc nhất cho vận tốc thân (nhận dạng từ thí nghiệm bước, xem
-identification.py). Mô hình mô-men Newton–Euler cần đo dòng/mô-men bánh nên không nhận dạng
-được với phần cứng hiện có; bài báo phải nói rõ lựa chọn này.
+The wheel controllers (STM32) accept wheel-speed set-points, so the prediction model is the Mecanum kinematics
+plus a first-order lag of the body velocity (identified from step tests, see
+identification.py). A Newton-Euler torque model would require wheel current/torque measurements and cannot be
+identified with the available hardware; the paper states this choice.
 
-Trạng thái x = [X, Y, theta, vx, vy, omega] (vx, vy, omega trong khung thân).
-Đầu vào u = [vx_c, vy_c, omega_c] (vận tốc thân đặt, chuyển sang tốc độ bánh bằng wheel_matrix).
+State x = [X, Y, theta, vx, vy, omega] (vx, vy, omega in the body frame).
+Input u = [vx_c, vy_c, omega_c] (commanded body velocity, mapped to wheel speeds by wheel_matrix).
 """
 from __future__ import annotations
 
@@ -18,15 +18,15 @@ import yaml
 
 @dataclass
 class RobotParams:
-    wheel_radius: float = 0.05          # m, đo cơ khí
-    lx: float = 0.20                    # m, nửa chiều dài cơ sở (tâm → trục bánh)
-    ly: float = 0.22                    # m, nửa vệt bánh
-    wheel_speed_max: float = 20.0       # rad/s, giới hạn tốc độ bánh dùng trong ràng buộc
-    body_acc_max: tuple = (1.0, 1.0, 2.0)  # giới hạn |Δu|/dt cho vx, vy, omega
-    tau: tuple = (0.15, 0.15, 0.12)     # s, hằng số thời gian vòng vận tốc (nhận dạng)
-    radius: float = 0.42                # m, bán kính đường tròn bao robot
-    omega_max: float | None = None      # rad/s, giới hạn tốc độ quay thân (Bảng 5: 1.5); None = chỉ giới hạn bánh
-    # Các giá trị mặc định chỉ để chạy thử phần mềm; giá trị thật lấy từ config/robot.yaml.
+    wheel_radius: float = 0.05          # m, mechanical measurement
+    lx: float = 0.20                    # m, half wheelbase (centre -> wheel axle)
+    ly: float = 0.22                    # m, half track width
+    wheel_speed_max: float = 20.0       # rad/s, wheel-speed limit used in the constraints
+    body_acc_max: tuple = (1.0, 1.0, 2.0)  # limit on |du|/dt for vx, vy, omega
+    tau: tuple = (0.15, 0.15, 0.12)     # s, time constants of the velocity loops (identified)
+    radius: float = 0.42                # m, radius of the circle enclosing the robot
+    omega_max: float | None = None      # rad/s, body yaw-rate limit (Table 5: 1.5); None = wheel limits only
+    # Defaults are for software tests only; real values come from config/robot.yaml.
     source: dict = field(default_factory=dict)
 
     @classmethod
@@ -42,7 +42,7 @@ class RobotParams:
 
 
 def wheel_matrix(p: RobotParams) -> np.ndarray:
-    """Tốc độ bánh [FL, FR, RL, RR] = W @ [vx, vy, omega] (quy ước con lăn chữ X nhìn từ trên)."""
+    """Wheel speeds [FL, FR, RL, RR] = W @ [vx, vy, omega] (X-roller convention seen from above)."""
     L = p.lx + p.ly
     return np.array([[1.0, -1.0, -L],
                      [1.0, 1.0, L],
@@ -55,7 +55,7 @@ def body_from_wheels(p: RobotParams, w: np.ndarray) -> np.ndarray:
 
 
 def f_cont(x, u, p: RobotParams, lib=np):
-    """Đạo hàm trạng thái; lib = numpy hoặc casadi."""
+    """State derivative; lib = numpy or casadi."""
     th, vx, vy, om = x[2], x[3], x[4], x[5]
     c, s = lib.cos(th), lib.sin(th)
     tau = p.tau

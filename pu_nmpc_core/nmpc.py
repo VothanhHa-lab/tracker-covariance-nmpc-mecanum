@@ -1,13 +1,13 @@
-"""NMPC đa bắn (multiple shooting) bằng CasADi + IPOPT.
+"""Multiple-shooting NMPC with CasADi + IPOPT.
 
-Ràng buộc va chạm là nửa mặt phẳng tuyến tính theo vị trí robot:
+Collision constraints are half-planes that are linear in the robot position:
     n_{s,k}^T (p_{k+1} − c_{s,k}) + slack_{s,k} ≥ m_{s,k}
-với mỗi "khe" s (người hoặc điểm tĩnh từ LiDAR) và mỗi bước k. Các tham số (c, n, m) do
-controller.py tính cho từng phương pháp; NMPC không phân biệt phương pháp, nhờ vậy so sánh là
-công bằng (cùng bộ giải, cùng chi phí, cùng giới hạn bánh).
+for every "slot" s (a person or a static LiDAR point) and every step k. The parameters (c, n, m) are
+computed by controller.py for each method; the NMPC does not distinguish methods, which keeps the comparison
+fair (same solver, same cost, same wheel limits).
 
-Trên Raspberry Pi 4, IPOPT có thể không đạt 10 Hz; khi đó dùng acados (SQP-RTI) với cùng mô hình,
-hoặc chạy bộ điều khiển trên máy tính mang theo, và ghi rõ cấu hình trong bài.
+On a Raspberry Pi 4, IPOPT may not reach 10 Hz; then use acados (SQP-RTI) with the same model,
+or run the controller on a carried laptop, and state the configuration in the paper.
 """
 from __future__ import annotations
 
@@ -24,13 +24,13 @@ from .models import RobotParams, rk4, wheel_matrix
 class NMPCParams:
     N: int = 20
     dt: float = 0.1
-    n_slots: int = 12              # số khe ràng buộc (người + điểm tĩnh)
-    n_people_slots: int | None = None  # các khe từ chỉ số này trở đi là điểm tĩnh (tường)
-    static_slack_mult: float = 100.0   # phạt vi phạm ràng buộc tường nặng hơn → gần như ràng buộc cứng
-    input_delay: float = 0.0           # s, trễ chấp hành (nhận dạng); trạng thái đầu được dự báo qua khoảng trễ
+    n_slots: int = 12              # number of constraint slots (people + static points)
+    n_people_slots: int | None = None  # slots from this index on are static points (walls)
+    static_slack_mult: float = 100.0   # heavier penalty on wall-constraint violation -> nearly hard constraint
+    input_delay: float = 0.0           # s, actuation delay (identified); the initial state is predicted over the delay
     q_pos: float = 10.0
     q_th: float = 2.0
-    q_term: float = 5.0            # nhân cho bước cuối
+    q_term: float = 5.0            # multiplier for the last step
     r_u: float = 0.1
     r_du: float = 2.0
     w_slack_l1: float = 1e3
@@ -49,11 +49,11 @@ class NMPC:
         SL = opti.variable(S, N)
         x0 = opti.parameter(6)
         u_prev = opti.parameter(3)
-        ref = opti.parameter(3, N)          # X, Y, theta tại k = 1..N
-        C = opti.parameter(2 * S, N)        # tâm khe
-        Nn = opti.parameter(2 * S, N)       # pháp tuyến khe
-        M = opti.parameter(S, N)            # biên khe
-        sv = opti.parameter()               # hệ số giới hạn tốc độ (1 = danh định)
+        ref = opti.parameter(3, N)          # X, Y, theta at k = 1..N
+        C = opti.parameter(2 * S, N)        # slot centres
+        Nn = opti.parameter(2 * S, N)       # slot normals
+        M = opti.parameter(S, N)            # slot margins
+        sv = opti.parameter()               # speed-limit scale (1 = nominal)
 
         W = wheel_matrix(rp)
         wmax = rp.wheel_speed_max
@@ -91,14 +91,14 @@ class NMPC:
         self._guess = None
 
     def inactive_slots(self, robot_pred):
-        """Khe không dùng: đặt tâm cách điểm tuyến tính hóa 100 m, biên 0 (luôn thỏa)."""
+        """Unused slots: centre 100 m away from the linearisation point, margin 0 (always satisfied)."""
         S, N = self.mp.n_slots, self.mp.N
         n = np.tile(np.array([1.0, 0.0]), (S, N, 1))
         c = robot_pred[None, :, :] - 100.0 * n
         return c, n, np.zeros((S, N))
 
     def solve(self, x0, u_prev, ref, c, n, m, speed_scale=1.0):
-        """c, n: [S, N, 2]; m: [S, N]; ref: [N, 3]. Trả về dict kết quả."""
+        """c, n: [S, N, 2]; m: [S, N]; ref: [N, 3]. Returns a result dict."""
         o, p, mp = self.opti, self.p, self.mp
         o.set_value(p["x0"], x0)
         o.set_value(p["u_prev"], u_prev)
@@ -119,7 +119,7 @@ class NMPC:
             ok, stats = True, sol.stats()
             Xs, Us, SLs = sol.value(self.v["X"]), sol.value(self.v["U"]), sol.value(self.v["SL"])
         except RuntimeError:
-            # hết giờ / không hội tụ: lấy nghiệm hiện tại (debug), bộ điều khiển sẽ quyết định
+            # time limit / no convergence: take the current iterate (debug); the controller decides what to do
             ok, stats = False, o.stats()
             Xs, Us, SLs = o.debug.value(self.v["X"]), o.debug.value(self.v["U"]), o.debug.value(self.v["SL"])
         dt_ms = 1e3 * (time.perf_counter() - t0)

@@ -1,4 +1,4 @@
-"""Kiểm thử trích bag: ghi một bag tổng hợp nhỏ bằng rosbags rồi đọc lại (python3 tests/test_bag.py)."""
+"""Bag-extraction test: write a small synthetic bag with rosbags and read it back (python3 tests/test_bag.py)."""
 import pathlib
 import sys
 import tempfile
@@ -44,7 +44,7 @@ def main():
         man = bag_to_csv.extract(bag, pathlib.Path(d) / "csv")
         assert man["files"]["detections"]["rows"] == 5 and man["files"]["tracks"]["rows"] == 5
         det = pd.read_csv(pathlib.Path(d) / "csv" / "detections.csv")
-        assert np.allclose(det.stamp - det.t_log, -0.03, atol=1e-6)      # stamp đo trước thời điểm ghi 30 ms
+        assert np.allclose(det.stamp - det.t_log, -0.03, atol=1e-6)      # measurement stamp 30 ms before logging time
         tf = bag_to_csv.TFSeries(pd.read_csv(pathlib.Path(d) / "csv" / "tf.csv"))
         P = tf.lookup(["map", "odom", "base_link"], np.array([100.25]))
         assert abs(P[0, 0] - 0.25) < 1e-6 and abs(P[0, 2] - 0.1) < 1e-6

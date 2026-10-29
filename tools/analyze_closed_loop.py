@@ -1,8 +1,8 @@
-"""P6: chỉ số từng lượt (từ GROUND TRUTH) và tổng hợp theo phương pháp × kịch bản.
+"""P6: per-trial metrics (from GROUND TRUTH) and summaries by method x scenario.
 
 python3 tools/analyze_closed_loop.py --phase R <data_dir>
-Chỉ các lượt có trial.json với phase khớp được đưa vào; MỌI lượt của lịch đều được liệt kê,
-kể cả lượt hỏng/bỏ dở (outcome = missing_data / aborted), không loại lượt nào sau khi xem kết quả.
+Only trials whose trial.json has a matching phase are included; ALL trials of the schedule are listed,
+including failed/aborted ones (outcome = missing_data / aborted); no trial is excluded after seeing results.
 """
 import argparse
 import csv
@@ -19,8 +19,8 @@ from common import RESULTS, ROOT, interp_pose, is_synthetic, load, provenance, w
 from pu_nmpc_core import config  # noqa: E402
 from pu_nmpc_core.metrics import clopper_pearson, paired_bootstrap, upper_bound_zero  # noqa: E402
 
-R_PERSON = 0.25       # m, bán kính người (chọn trước)
-ZONE = 0.5            # m, vùng cá nhân tính từ mép robot tới mép người
+R_PERSON = 0.25       # m, person radius (chosen in advance)
+ZONE = 0.5            # m, personal zone measured from the robot edge to the person edge
 METHODS = ["cov", "fixed", "heuristic"]
 
 
@@ -136,7 +136,7 @@ def main(data_dir, phase, schedule=None):
                dict(aggregate=agg, paired=pairs, n_planned=len(planned), n_run=int(len(ran)),
                     n_not_run=int((df.outcome == "not_run").sum()),
                     provenance=provenance([pathlib.Path(data_dir) / t / "csv" for t in sorted(seen)], synthetic=synth)))
-    print(ran.groupby(["method", "outcome"]).size() if len(ran) else "chưa có lượt nào")
+    print(ran.groupby(["method", "outcome"]).size() if len(ran) else "no trials yet")
 
 
 if __name__ == "__main__":

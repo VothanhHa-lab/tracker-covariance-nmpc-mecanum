@@ -1,4 +1,4 @@
-"""Kiểm thử phần lõi (chạy: python3 tests/test_core.py). Không cần ROS."""
+"""Tests of the core package (run: python3 tests/test_core.py). No ROS required."""
 import pathlib
 import sys
 
@@ -58,7 +58,7 @@ def test_tracker_consistency_and_order():
         for i in range(0, len(bs), 3):
             chunk = bs[i:i + 3]
             if order == "shuffled":
-                chunk = chunk[::-1]            # đến ngược thứ tự trong cửa sổ trễ
+                chunk = chunk[::-1]            # arrive in reverse order within the lag window
             for b in chunk:
                 tr.add(b)
             now = max(c.stamp for c in chunk) + 0.45
@@ -70,7 +70,7 @@ def test_tracker_consistency_and_order():
         res.append((np.array(errs), np.array(Ps), tr.stats["late_dropped"]))
     (e1, P1, l1), (e2, P2, l2) = res
     assert l1 == 0 and l2 == 0
-    assert np.allclose(e1, e2)                 # thứ tự đến không ảnh hưởng khi trễ < lag
+    assert np.allclose(e1, e2)                 # arrival order does not matter when delay < lag
     cov = metrics.ellipse_coverage(e1[20:], P1[20:], 0.95)
     assert 0.85 < cov <= 1.0, cov
 
@@ -90,7 +90,7 @@ def test_kappa_gauss_and_cantelli():
     assert abs(np.mean(z < -k) - eps) < 0.003
     kc = constraint.kappa(eps, "cantelli")
     assert kc > k
-    # phân bố lệch, cùng phương sai: Cantelli vẫn là cận trên
+    # skewed distribution with the same variance: Cantelli is still an upper bound
     zz = (RNG.exponential(size=200000) - 1.0)
     assert np.mean(zz < -kc) <= eps and np.mean(-zz < -kc) <= eps
 
@@ -101,7 +101,7 @@ def test_chance_constraint_monte_carlo():
     Pr = np.diag([0.01, 0.01])
     n = np.array([1.0, 0.0])
     m, _ = constraint.cov_margins(n[None], Ph[None], Pr, d0, eps, "gauss")
-    pr = ph + n * m[0]                         # robot đặt đúng trên biên ràng buộc
+    pr = ph + n * m[0]                         # robot placed exactly on the constraint boundary
     eh = RNG.multivariate_normal(np.zeros(2), Ph, 200000)
     er = RNG.multivariate_normal(np.zeros(2), Pr, 200000)
     viol = np.mean(np.linalg.norm((pr + er) - (ph + eh), axis=1) < d0)
@@ -160,12 +160,12 @@ def test_nmpc_respects_halfspace():
     mpc = NMPC(rp, NMPCParams(N=15, n_slots=1))
     ref = np.column_stack([np.linspace(0.1, 3.0, 15), np.zeros(15), np.zeros(15)])
     c = np.tile(np.array([1.5, 0.0]), (1, 15, 1))
-    n = np.tile(np.array([0.0, 1.0]), (1, 15, 1))          # phải ở phía y ≥ 0.6
+    n = np.tile(np.array([0.0, 1.0]), (1, 15, 1))          # must stay at y >= 0.6
     m = np.full((1, 15), 0.6)
     r = mpc.solve(np.zeros(6), np.zeros(3), ref, c, n, m)
     assert r["ok"], r["status"]
     y = r["X"][1, 1:]
-    assert np.all(y + r["max_slack"] >= 0.6 - 1e-4) and r["max_slack"] > 0   # đầu tầm: không khả thi → slack
+    assert np.all(y + r["max_slack"] >= 0.6 - 1e-4) and r["max_slack"] > 0   # start of horizon infeasible -> slack
 
 
 def test_cluster_scan_two_legs():
@@ -173,7 +173,7 @@ def test_cluster_scan_two_legs():
     inc = np.deg2rad(0.5)
     ang = -np.pi + inc * np.arange(720)
     r = np.full(720, np.inf)
-    for cx, cy in [(3.0, 0.12), (3.0, -0.12)]:        # hai chân bán kính 0.06 m tại x = 3 m
+    for cx, cy in [(3.0, 0.12), (3.0, -0.12)]:        # two legs of radius 0.06 m at x = 3 m
         for i, a in enumerate(ang):
             d = np.array([np.cos(a), np.sin(a)])
             b = d @ np.array([cx, cy]); c = cx ** 2 + cy ** 2 - 0.06 ** 2
@@ -191,7 +191,7 @@ def test_bbox_range_bearing():
     fx = fy = 600.0; cx, cy = 320.0, 240.0
     rb = bbox_to_range_bearing((400, 100, 500, 400), depth, fx, fy, cx, cy)
     X = (450 - cx) / fx * 3.0
-    assert abs(rb[0] - np.hypot(X, 3.0)) < 1e-6 and rb[1] < 0          # bên phải → bearing âm
+    assert abs(rb[0] - np.hypot(X, 3.0)) < 1e-6 and rb[1] < 0          # to the right -> negative bearing
 
 
 def test_fusion_no_duplicate_tracks():

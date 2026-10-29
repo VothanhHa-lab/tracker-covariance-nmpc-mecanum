@@ -1,14 +1,14 @@
-# Mọi tham số chốt (freeze) sau pilot P5, TRƯỚC chiến dịch báo cáo P6; ghi mã băm tệp vào nhật ký.
+# All parameters frozen after pilot P5, BEFORE reporting campaign P6; log the file hash.
 method:
   method: cov
-  d0: 0.95              # r_robot 0.42 + r_người 0.25 + khoảng hở 0.28 (chọn trước, không chỉnh theo kết quả)
+  d0: 0.95              # r_robot 0.42 + r_person 0.25 + clearance 0.28 (chosen in advance, not tuned on results)
   eps: 0.01
   kappa_kind: gauss
   d_fixed: 0.30
-  q_acc_pred: 0.5       # = q_acc của bộ bám (nhận dạng)
+  q_acc_pred: 0.5       # = q_acc of the tracker (identified)
   sigma_freeze_after: 1.0
   max_people: 4
-  max_static: 16         # một điểm gần nhất cho mỗi cung 22.5° (8 cung không biểu diễn được góc lõm, pilot 29/10)
+  max_static: 16         # nearest point per 22.5-deg sector (8 sectors cannot represent concave corners, pilot 29/10)
   static_clearance: 0.10
   static_range: 2.5
   stale_after: 0.5
@@ -26,11 +26,11 @@ nmpc:
   w_slack_l2: 10000.0
   max_iter: 60
   max_cpu_time: 0.08
-  input_delay: 0.0      # s; TO_IDENTIFY (P3). Nghiên cứu mô phỏng đặt bằng trễ chấp hành giả định (simstudy.yaml)
+  input_delay: 0.0      # s; TO_IDENTIFY (P3). The simulation study sets it to the assumed actuation delay (simstudy.yaml)
 reference:
   v_ref: 0.6
   heading_mode: fixed
   goal_tol: 0.15
 guard:
-  stop_margin: 0.30     # m, vùng dừng cứng quanh thân robot trên quét thô (scan_stop_guard)
+  stop_margin: 0.30     # m, hard-stop zone around the robot body on the raw scan (scan_stop_guard)
   scan_timeout: 0.3

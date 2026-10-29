@@ -1,34 +1,50 @@
-# Nhật ký thiết kế nghiên cứu mô phỏng (chốt 2026-10-29 07:15)
+# Design log of the simulation study (frozen 2026-10-29 07:15)
 
-Mọi quyết định dưới đây được đưa ra trên hạt phát triển 0–9 (`sim_campaign --campaign dev`), TRƯỚC khi chạy
-hạt báo cáo (main 1000–1099, robust 2000–2049, ablation 1000–1099). Không chỉnh tham số theo kết quả báo cáo.
+All decisions below were taken on development seeds 0-9 (`sim_campaign --campaign dev`) BEFORE the reporting seeds
+were run (main 1000-1099, robustness 2000-2049, ablation 1000-1099). No parameter was changed on the basis of
+reporting results.
 
-1. Hành lang H2 nới từ 2.0 m lên 2.6 m; H3 dùng hành lang 3.0 m với chỗ thắt 1.6 m. Lý do: với người không né,
-   hành lang 2.0 m không đủ chỗ cho hai bên tránh nhau (va chạm không phụ thuộc bộ điều khiển).
-2. Phạt vi phạm ràng buộc tường × 100 so với ràng buộc người (áp dụng cho cả ba phương pháp).
-3. q của mô hình người = 0.022 m²/s³, ước lượng hợp lý cực đại trên 300 quỹ đạo người của hạt 0–49 (thay giá trị đặt tay 0.5).
-4. Va chạm được phân loại chủ động/thụ động; kiểm tra chạm tường theo khung chữ nhật 0.60 × 0.55 m.
-5. Người danh định né robot theo lực xã hội (A = 3 m/s², B = 0.5 m, λ = 0.35, giả định); người không né giữ làm điều kiện xấu nhất.
-   Lý do: với người không né, mọi va chạm ở pilot đều là thụ động (robot đã dừng), không phản ánh bộ điều khiển.
-6. Điểm tĩnh: một điểm gần nhất trong mỗi cung góc, 16 cung (8 cung để lọt góc lõm của chỗ thắt H3).
-7. Bù trễ chấp hành trong NMPC (input_delay = trễ chấp hành giả định 0.05 s), áp dụng cho cả ba phương pháp.
+1. Corridor H2 widened from 2.0 m to 2.6 m; H3 uses a 3.0-m corridor with a 1.6-m opening. Reason: with non-reactive
+   people a 2.0-m corridor leaves no room for both parties to pass (contacts independent of the controller).
+2. Violations of wall constraints are penalised 100 times more than person constraints (all three methods).
+3. Pedestrian model q = 0.022 m^2/s^3, maximum-likelihood estimate on 300 pedestrian trajectories of seeds 0-49
+   (replacing the hand-set value 0.5).
+4. Contacts are classified as active/passive; wall contact is checked against the 0.60 x 0.55 m rectangular footprint.
+5. Nominal pedestrians avoid the robot with a social force (A = 3 m/s^2, B = 0.5 m, lambda = 0.35, assumed);
+   non-reactive pedestrians are kept as a worst-case condition. Reason: with non-reactive pedestrians all pilot contacts
+   were passive (robot already stopped) and did not reflect the controller.
+6. Static points: the nearest point in each angular sector, 16 sectors (8 sectors missed the concave corners of the H3
+   opening).
+7. Actuation-delay compensation in the NMPC (input_delay = assumed actuation delay 0.05 s), for all three methods.
 
-Kết quả pilot cuối (hạt 0–9, 150 lượt): 150/150 thành công cho cả ba phương pháp. Số liệu pilot KHÔNG báo cáo.
+Final pilot (seeds 0-9, 150 runs): 150/150 successes for all three methods. Pilot results are NOT reported.
 
-Mã băm: code=ca4e993fe8c95636 simstudy.yaml=44783b41c653ecbd controller.yaml=5827ce9c3969c872 tracker.yaml=12753bf8fef76ff8
+Hashes: code=ca4e993fe8c95636 simstudy.yaml=44783b41c653ecbd controller.yaml=5827ce9c3969c872 tracker.yaml=12753bf8fef76ff8
 
-## Bản sửa sau phản biện (29/10/2026)
-Các bổ sung này được quyết định sau khi đã xem kết quả của chiến dịch báo cáo, nên bài báo ghi rõ là phân tích bổ sung hậu kiểm (post hoc). Chúng được đánh giá trên các hạt mới 3000–3049, là những hạt chưa từng được chạy.
-1. **Phóng hiệp phương sai γ.** Quy tắc được chốt trước khi chạy chiến dịch revision: chọn γ nhỏ nhất trong lưới (1; 1,25; 1,5; 1,75; 2; 2,5; 3; 4) sao cho độ phủ gộp đạt ≥ 95 % ở cả ba tầm dự báo 0; 0,5 và 1 s. Việc chọn chỉ dùng hạt dev 0–9 (chiến dịch devcal, phương pháp cov). Kết quả: γ = 1,5 (xem `results/calibration.json`).
-2. **Quét lề cố định.** Thêm các mức đệm 0,45; 0,60 và 0,75 m bên cạnh mức gốc 0,30 m, để so sánh trên đường Pareto giữa khoảng cách và thời gian.
-3. **Đo thời gian giải.** Chiến dịch timing chạy 1 tiến trình trên máy không có chiến dịch nào khác (hạt 3000–3009).
-4. **Thay đổi mã.** Thêm `MethodParams.cov_inflate` (mặc định 1, nên không đổi kết quả của các chiến dịch trước) và các bộ đếm độ phủ theo γ trong `simstudy.py`.
-5. **Đối chứng thứ tư "ccconst"** (người dùng yêu cầu ngày 29/10/2026).
-   - Nội dung: ràng buộc xác suất giống hệt phương pháp đề xuất, nhưng hiệp phương sai người là hằng số tính trước. Đó là hiệp phương sai hậu nghiệm dừng của bộ lọc CV khi cập nhật vị trí ở 10 Hz, với nhiễu đẳng hướng của LiDAR ở 3 m cộng sai số định vị. Kết quả: σ_p ≈ 0,039 m, σ_v ≈ 0,105 m/s.
-   - Các tham số được chốt trước khi chạy và không được tinh chỉnh.
-   - Chạy trên hạt chính 1000–1099 (altmain), hạt mới 3000–3049 (altrev), và đo thời gian riêng với 1 tiến trình (alttiming).
-6. **Đo lại thời gian.** Trong lần đo đầu của chiến dịch timing, lượt H5_side / hạt 3002 / cov chạy hết 348 s thời gian thực, trong khi các lượt khác chỉ mất khoảng 4–19 s. Trong lượt này có một lần giải dài 8224 ms. Hiện tượng phù hợp với việc tiến trình bị tạm dừng, chẳng hạn máy ngủ. Toàn bộ chiến dịch timing được đo lại sau chiến dịch alt, với chế độ giữ máy thức. Lần đo đầu được lưu ở `sim_timing_run1.*`.
-7. **Kiểm chứng trên DROW v2 (29/10/2026).**
-   - Kết quả: tỉ lệ phát hiện chỉ đạt giả định 0,90 tới khoảng 3 m; ở 6–8 m chỉ còn khoảng 62 %.
-   - Quyết định của tác giả liên hệ: **giữ nguyên mô phỏng**, chỉ báo cáo kết quả DROW (mục 5.7 của bài).
-   - Không chạy thêm điều kiện mô phỏng nào dựa trên số đo của DROW.
+## Post hoc additions (29/10/2026)
+
+These additions were decided after the reporting results had been seen, and the paper labels them as post hoc. They
+are evaluated on new seeds 3000-3049 that had never been run.
+
+1. **Covariance inflation gamma.** Rule fixed before the revision campaign: choose the smallest gamma in the grid
+   (1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4) for which the pooled coverage reaches >= 95 % at all three horizons 0, 0.5 and 1 s.
+   The choice uses development seeds 0-9 only (campaign devcal, method cov). Result: gamma = 1.5
+   (`results/calibration.json`).
+2. **Fixed-margin sweep.** Buffers of 0.45, 0.60 and 0.75 m in addition to the original 0.30 m, for a comparison on the
+   clearance-time trade-off.
+3. **Solve-time measurement.** Timing campaign with one process and no other campaign running (seeds 3000-3009).
+4. **Code changes.** `MethodParams.cov_inflate` (default 1, so earlier campaigns are unchanged) and coverage counters for
+   the gamma grid in `simstudy.py`.
+5. **Fourth baseline "ccconst"** (requested by the corresponding author on 29/10/2026). The same chance constraint as
+   the proposed method, but with a constant person covariance computed in advance: the steady-state posterior covariance
+   of the CV filter updated with positions at 10 Hz with the isotropic LiDAR noise at 3 m plus the localisation error
+   (sigma_p ~ 0.039 m, sigma_v ~ 0.105 m/s). Parameters fixed before running, not tuned. Run on main seeds 1000-1099
+   (altmain), new seeds 3000-3049 (altrev) and a separate single-process timing campaign (alttiming).
+6. **Repeated timing.** In the first timing attempt, run H5_side / seed 3002 / cov took 348 s of wall-clock time while
+   other runs took about 4-19 s, with one solve of 8224 ms, consistent with a suspended process (e.g. machine sleep).
+   The whole timing campaign was repeated after the alt campaigns with idle sleep disabled; the first attempt is kept as
+   `sim_timing_run1.*`. The repetition again contained a few runs above ten times the median wall-clock time; the paper
+   therefore reports median percentiles and not the maximum solve time.
+7. **Check on DROW v2 (29/10/2026).** The detection rate matched the assumed 0.90 only up to about 3 m and fell to about
+   62 % at 6-8 m. Decision of the corresponding author: **keep the simulation unchanged** and report the DROW results
+   (Section 5.6 of the paper). No simulation condition was added on the basis of the DROW measurements.

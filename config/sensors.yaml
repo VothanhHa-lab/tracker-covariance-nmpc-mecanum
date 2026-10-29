@@ -1,5 +1,5 @@
-# Mô hình nhiễu cực của cảm biến phát hiện người. TO_IDENTIFY: tools/analyze_sensor_noise.py ghi đè tệp này
-# (bản sinh tự động có khóa `identified_from`). Giá trị dưới đây chỉ để chạy thử phần mềm.
+# Polar noise models of the people-detection sensors. TO_IDENTIFY: tools/analyze_sensor_noise.py writes the identified
+# version (key `identified_from`). The values below are only for software tests.
 sensors:
   lidar:
     sigma_r_a: 0.03
@@ -11,5 +11,5 @@ sensors:
     sigma_r_a: 0.05
     sigma_r_b: 0.03
     sigma_b: 0.02
-    fov_half_deg: 43.5       # D435i màu: HFOV ≈ 87° theo datasheet — TO_MEASURE vùng phát hiện hiệu dụng
+    fov_half_deg: 43.5       # D435i: HFOV ~ 87 deg per datasheet - TO_MEASURE the effective detection field
     r_max: 6.0

@@ -1,8 +1,8 @@
-"""Thí nghiệm bước để nhận dạng khâu vận tốc (robot kê bánh hoặc trên sàn trống, có người giữ e-stop).
+"""Step experiment to identify the velocity loops (robot on blocks or on an empty floor, with an operator at the e-stop).
 
-Chuỗi: với mỗi trục (vx, vy, omega) và mỗi biên độ, giữ 0 trong `rest` s, giữ biên độ trong `hold` s,
-rồi về 0; lặp `reps` lần. Lệnh chỉ được gửi khi /trial/enable = True. Ghi rosbag song song
-(launch identification.launch.py) để có /cmd_vel, /odom, /joint_states (nếu có), /imu.
+Sequence: for each axis (vx, vy, omega) and amplitude, hold 0 for `rest` s, hold the amplitude for `hold` s,
+then return to 0; repeat `reps` times. Commands are sent only while /trial/enable = True. Record a rosbag in parallel
+(launch identification.launch.py) to obtain /cmd_vel, /odom, /joint_states (if available) and /imu.
 """
 import itertools
 
@@ -47,7 +47,7 @@ class StepTest(Node):
                 tw.angular.z = val
         self.pub.publish(tw)
         if self.i >= len(self.seq):
-            self.get_logger().info("Hoàn tất chuỗi bước", once=True)
+            self.get_logger().info("Step sequence completed", once=True)
 
 
 def main():

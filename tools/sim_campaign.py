@@ -1,10 +1,10 @@
-"""Chiến dịch mô phỏng cho nghiên cứu mô phỏng (phương án A).
+"""Simulation campaigns of the simulation study.
 
-python3 tools/sim_campaign.py --campaign dev       # hạt 0–49: kiểm tra, không báo cáo
-python3 tools/sim_campaign.py --campaign main      # hạt 1000–1099, 3 phương pháp × 5 kịch bản
-python3 tools/sim_campaign.py --campaign robust    # hạt 2000–2049: nhiễu ×2, trễ ×1.5, người né robot
-python3 tools/sim_campaign.py --campaign ablation  # hạt 1000–1099, biến thể của phương pháp cov
-Kết quả: results/sim_<campaign>.csv (ghi tiếp được khi bị ngắt) và results/sim_<campaign>.meta.json.
+python3 tools/sim_campaign.py --campaign dev       # seeds 0-9: checks only, not reported
+python3 tools/sim_campaign.py --campaign main      # seeds 1000-1099, 3 methods x 5 scenarios
+python3 tools/sim_campaign.py --campaign robust    # seeds 2000-2049: noise x2, delay x1.5, non-reactive people
+python3 tools/sim_campaign.py --campaign ablation  # seeds 1000-1099, variants of the cov method
+Output: results/sim_<campaign>.csv (resumable after interruption) and results/sim_<campaign>.meta.json.
 """
 import argparse
 import hashlib
@@ -49,7 +49,7 @@ def build():
     rp = RobotParams(wheel_radius=r_w, lx=v(ro, "lx"), ly=v(ro, "ly"), wheel_speed_max=v(ro, "v_max") / r_w,
                      body_acc_max=tuple(v(ro, "body_acc_max")), tau=tuple(v(ro, "tau_model")), radius=v(ro, "radius"),
                      omega_max=v(ro, "omega_max"))
-    # mô hình nhiễu tuyến tính a + b·r khớp với mô hình datasheet/giả định trên dải dùng
+    # linear noise model a + b*r fitted to the data-sheet/assumed model over the range used
     rl = np.linspace(0.3, v(li, "range_max_used"), 200)
     bl, al = np.polyfit(rl, lidar_sigma(rl, v(li, "centroid_std")), 1)
     rc = np.linspace(*v(ca, "range"), 200)
@@ -68,16 +68,16 @@ def build():
     q = v(s["identified"], "q_acc")
     tp.q_acc = q
     mp.q_acc_pred = q
-    # đối chứng "ccconst": hiệp phương sai dừng của bộ lọc khi LiDAR thấy người liên tục ở 3 m (chốt trước khi chạy)
+    # "ccconst" baseline: steady-state filter covariance for a person seen continuously by the LiDAR at 3 m (fixed before running)
     r0, ls = 3.0, v(s["localization"], "std")
     r_var = 0.5 * (lidar.covariance_polar(r0)[0, 0] + r0 ** 2 * lidar.covariance_polar(r0)[1, 1]) + ls[0] ** 2 + 0.5 * (r0 * ls[2]) ** 2
     mp.const_cov = tuple(steady_state_cov(1.0 / v(li, "rate"), q, r_var).ravel())
-    npar.input_delay = v(ro, "actuation_delay")     # bộ điều khiển biết trễ chấp hành (như sau bước nhận dạng P3)
+    npar.input_delay = v(ro, "actuation_delay")     # the controller knows the actuation delay (as after identification step P3)
     return s, rp, sensors, cfg, mp, npar, refp, tp, dict(lidar_ab=(float(al), float(bl)), camera_ab=(float(ac), float(bc)))
 
 
 CONDITIONS = {
-    # tên: (phương pháp, thay đổi cấu hình)
+    # name: (method, configuration change)
     "nominal": {},
     "noise2": dict(noise_scale=2.0),
     "delay15": dict(delay_scale=1.5),
@@ -85,8 +85,8 @@ CONDITIONS = {
     "nocomp": dict(compensate=False),
     "lidar_only": dict(sensors_enabled=("lidar",)),
     "cantelli": dict(kappa_kind="cantelli"),
-    # bản sửa sau phản biện (hạt mới 3000–3049, chưa từng chạy)
-    "covcal": dict(cov_inflate="calibrated"),   # γ đọc từ simstudy.yaml: revision.cov_inflate (hiệu chỉnh trên hạt dev)
+    # post hoc campaign (new seeds 3000-3049, never run before)
+    "covcal": dict(cov_inflate="calibrated"),   # gamma read from simstudy.yaml: revision.cov_inflate (calibrated on dev seeds)
     "fix045": dict(d_fixed=0.45),
     "fix060": dict(d_fixed=0.60),
     "fix075": dict(d_fixed=0.75),
@@ -163,7 +163,7 @@ def main(name, workers):
                 sensor_fit=fit, const_cov=list(mp.const_cov), n_jobs_total=len(jobs) + len(done), machine=os.uname().machine,
                 started=time.strftime("%Y-%m-%d %H:%M:%S"))
     (RESULTS / f"sim_{name}.meta.json").write_text(json.dumps(meta, indent=1))
-    print(f"{name}: {len(jobs)} lượt cần chạy ({len(done)} đã có), {workers} tiến trình", flush=True)
+    print(f"{name}: {len(jobs)} runs to do ({len(done)} already done), {workers} processes", flush=True)
     t0, k = time.time(), 0
     with Pool(workers, initializer=_init) as pool:
         for r in pool.imap_unordered(_job, jobs, chunksize=2):
@@ -171,10 +171,10 @@ def main(name, workers):
             k += 1
             if k % 50 == 0:
                 el = time.time() - t0
-                print(f"  {k}/{len(jobs)}  {el / k * (len(jobs) - k) / 60:.1f} phút còn lại", flush=True)
+                print(f"  {k}/{len(jobs)}  {el / k * (len(jobs) - k) / 60:.1f} min remaining", flush=True)
     meta["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
     (RESULTS / f"sim_{name}.meta.json").write_text(json.dumps(meta, indent=1))
-    print("XONG", name, flush=True)
+    print("DONE", name, flush=True)
 
 
 if __name__ == "__main__":

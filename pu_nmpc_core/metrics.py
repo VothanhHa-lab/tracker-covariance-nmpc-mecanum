@@ -1,4 +1,4 @@
-"""Chỉ số đánh giá và thống kê (dùng chung cho kiểm thử phần mềm và phân tích dữ liệu thật)."""
+"""Evaluation metrics and statistics (shared by software tests and the analysis of real data)."""
 from __future__ import annotations
 
 import numpy as np
@@ -7,7 +7,7 @@ from scipy.stats import beta, chi2
 
 
 def clopper_pearson(k, n, conf=0.95):
-    """Khoảng hai phía cho tỉ lệ k/n."""
+    """Two-sided interval for a proportion k/n."""
     if n == 0:
         return (np.nan, np.nan)
     a = 1 - conf
@@ -17,12 +17,12 @@ def clopper_pearson(k, n, conf=0.95):
 
 
 def upper_bound_zero(n, conf=0.95):
-    """Cận trên một phía khi quan sát 0/n sự kiện: 1 − (1 − conf)^(1/n)."""
+    """One-sided upper bound when 0/n events are observed: 1 - (1 - conf)^(1/n)."""
     return 1 - (1 - conf) ** (1 / n)
 
 
 def paired_bootstrap(a, b, n_boot=10000, seed=0, conf=0.95):
-    """Trung bình chênh lệch ghép cặp a − b và khoảng bootstrap percentile."""
+    """Mean paired difference a - b and its percentile-bootstrap interval."""
     a, b = np.asarray(a, float), np.asarray(b, float)
     ok = ~(np.isnan(a) | np.isnan(b))
     d = a[ok] - b[ok]
@@ -35,15 +35,15 @@ def paired_bootstrap(a, b, n_boot=10000, seed=0, conf=0.95):
 
 
 def nees(err, P):
-    """NEES cho từng mẫu: err [T,d], P [T,d,d]."""
+    """NEES per sample: err [T,d], P [T,d,d]."""
     return np.einsum("ti,ti->t", err, np.linalg.solve(P, err[..., None])[..., 0])
 
 
 def nees_consistency(e, d, conf=0.95):
-    """Trung bình NEES và khoảng chấp nhận chi-bình phương cho trung bình của T mẫu độc lập.
+    """Mean NEES and the chi-square acceptance interval for the mean of T independent samples.
 
-    Lưu ý: các mẫu liên tiếp của một vệt tương quan với nhau; khoảng này chỉ mang tính tham khảo,
-    kết luận chính dựa trên độ phủ elip (ellipse_coverage) theo từng người/lượt.
+    Note: consecutive samples of a track are correlated; this interval is indicative only, and the main
+    conclusion rests on the ellipse coverage (ellipse_coverage) per person/run.
     """
     T = len(e)
     a = 1 - conf
@@ -51,12 +51,12 @@ def nees_consistency(e, d, conf=0.95):
 
 
 def ellipse_coverage(err, P, level=0.95):
-    """Tỉ lệ sai số rơi vào elip mức `level` của hiệp phương sai (2D)."""
+    """Fraction of errors inside the covariance ellipse of level `level` (2D)."""
     return float(np.mean(nees(err, P) <= chi2.ppf(level, err.shape[1])))
 
 
 def ospa(X, Y, c=1.0, p=1):
-    """Khoảng cách OSPA giữa hai tập điểm 2D (Schuhmacher và cộng sự, 2008)."""
+    """OSPA distance between two sets of 2D points (Schuhmacher et al., 2008)."""
     X, Y = np.asarray(X, float).reshape(-1, 2), np.asarray(Y, float).reshape(-1, 2)
     m, n = len(X), len(Y)
     if m == 0 and n == 0:
@@ -71,9 +71,9 @@ def ospa(X, Y, c=1.0, p=1):
 
 
 def time_offset(t_a, x_a, t_b, x_b, search=(-0.5, 0.5), step=0.005):
-    """Độ trễ τ cực tiểu hóa sai số giữa x_a(t) và x_b(t − τ) (ước lượng trễ hiệu dụng của bộ bám).
+    """Delay tau minimising the error between x_a(t) and x_b(t - tau) (effective delay of the tracker).
 
-    τ > 0 nghĩa là chuỗi a chậm hơn chuỗi b.
+    tau > 0 means that series a lags series b.
     """
     taus = np.arange(search[0], search[1] + step / 2, step)
     best = (np.inf, np.nan)
@@ -87,9 +87,9 @@ def time_offset(t_a, x_a, t_b, x_b, search=(-0.5, 0.5), step=0.005):
 
 
 def min_distance_and_intrusion(t, robot_xy, people_xy, zone):
-    """Khoảng cách tâm–tâm nhỏ nhất và tổng thời gian ở trong vùng `zone` (m).
+    """Minimum centre distance and total time spent inside the zone `zone` (m).
 
-    people_xy: [T, M, 2] (NaN khi người không có mặt).
+    people_xy: [T, M, 2] (NaN when a person is absent).
     """
     d = np.linalg.norm(people_xy - robot_xy[:, None, :], axis=2)
     dmin_t = np.nanmin(d, axis=1) if d.size else np.full(len(t), np.inf)

@@ -1,6 +1,6 @@
 tracker:
-  q_acc: 0.5            # TO_IDENTIFY: fit_cv_q trên quỹ đạo GT của người (P2), chốt trước chiến dịch
-  lag: 0.20             # ≥ p99 trễ cảm biến đo được ở P4
+  q_acc: 0.5            # TO_IDENTIFY: fit_cv_q on ground-truth pedestrian trajectories (P2), frozen before the campaign
+  lag: 0.20             # >= p99 of the sensor delays measured in P4
   gate_chi2: 9.21
   init_vel_std: 1.0
   confirm_hits: 3

@@ -1,8 +1,8 @@
-"""Trích rosbag2 (mcap/sqlite3) → CSV chuẩn hóa cho phân tích. Không cần cài ROS (dùng thư viện rosbags).
+"""Extract rosbag2 (mcap/sqlite3) -> normalised CSV for analysis. No ROS installation needed (uses the rosbags library).
 
-python3 tools/bag_to_csv.py <data_dir>/<id>/bag   → ghi <data_dir>/<id>/csv/*.csv và manifest.json
+python3 tools/bag_to_csv.py <data_dir>/<id>/bag   -> writes <data_dir>/<id>/csv/*.csv and manifest.json
 
-Thời gian: dùng header.stamp khi có (thời điểm đo), nếu không thì thời điểm ghi của bag (log_time).
+Time: header.stamp when available (measurement time), otherwise the bag record time (log_time).
 """
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def extract(bag: pathlib.Path, out: pathlib.Path):
 
 
 class TFSeries:
-    """Tra cứu tư thế 2D parent←child theo thời gian (nội suy tuyến tính), ghép chuỗi khung."""
+    """Time lookup of the 2D pose parent<-child (linear interpolation), chaining frames."""
 
     def __init__(self, tf: pd.DataFrame):
         self.s = {}
@@ -125,7 +125,7 @@ class TFSeries:
         return out
 
     def lookup(self, chain, t):
-        """chain = ["map", "odom", "base_link"] → [T,3] tư thế base_link trong map."""
+        """chain = ["map", "odom", "base_link"] -> [T,3] pose of base_link in map."""
         T = None
         for p, c in zip(chain[:-1], chain[1:]):
             P = self._one(p, c, t)

@@ -1,10 +1,10 @@
-# Tham số robot. Mỗi mục ghi nguồn: measured (đo), datasheet, identified (nhận dạng), assumed (giả định).
-# Các giá trị TO_MEASURE hiện là số tạm để chạy thử phần mềm; PHẢI thay bằng giá trị đo trước khi thí nghiệm.
+# Robot parameters. Each entry states its source: measured, datasheet, identified or assumed.
+# TO_MEASURE values are placeholders for software tests; they MUST be replaced by measured values before experiments.
 robot:
-  wheel_radius:    {value: 0.05, source: "datasheet (Bảng 5 bản CA-NMPC) — TO_MEASURE bằng thước kẹp"}
-  lx:              {value: 0.20, source: "TO_MEASURE: nửa khoảng cách trục trước–sau"}
-  ly:              {value: 0.22, source: "TO_MEASURE: nửa vệt bánh"}
-  wheel_speed_max: {value: 20.0, source: "TO_MEASURE: tốc độ bánh lớn nhất ổn định (rad/s), lấy 80 % giá trị bão hòa"}
-  body_acc_max:    {value: [1.0, 1.0, 2.0], source: "assumed; kiểm tra không trượt bánh ở P3"}
+  wheel_radius:    {value: 0.05, source: "datasheet (Table 5 of the CA-NMPC draft) - TO_MEASURE with calipers"}
+  lx:              {value: 0.20, source: "TO_MEASURE: half distance between front and rear axles"}
+  ly:              {value: 0.22, source: "TO_MEASURE: half track width"}
+  wheel_speed_max: {value: 20.0, source: "TO_MEASURE: highest stable wheel speed (rad/s), 80 % of saturation"}
+  body_acc_max:    {value: [1.0, 1.0, 2.0], source: "assumed; check for no wheel slip in P3"}
   tau:             {value: [0.15, 0.15, 0.12], source: "TO_IDENTIFY: tools/analyze_identification.py"}
-  radius:          {value: 0.42, source: "TO_MEASURE: hiện tính từ kích thước 0.60 x 0.55 m của Bảng 5 bản cũ, chưa đo lại"}
+  radius:          {value: 0.42, source: "TO_MEASURE: currently from the 0.60 x 0.55 m footprint of Table 5 of the old draft, not re-measured"}

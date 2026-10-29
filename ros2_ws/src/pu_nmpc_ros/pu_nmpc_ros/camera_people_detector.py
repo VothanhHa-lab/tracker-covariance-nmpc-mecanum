@@ -1,7 +1,7 @@
-"""RGB-D (D435i, depth căn theo ảnh màu) + YOLO → ứng viên người trong khung camera_link.
+"""RGB-D (D435i, depth aligned to colour) + YOLO -> person candidates in camera_link.
 
-Cần: `pip install ultralytics`; trọng số YOLO đặt bằng tham số `model` (ví dụ yolov8n.pt).
-stamp của mảng phát hiện = stamp của ảnh màu (thời điểm phơi sáng theo driver realsense).
+Requires `pip install ultralytics`; YOLO weights set with the parameter `model` (e.g. yolov8n.pt).
+Stamp of the detection array = stamp of the colour image (exposure time per the realsense driver).
 """
 import message_filters
 import numpy as np
