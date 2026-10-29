@@ -1,0 +1,43 @@
+revision: 1750 lượt cần chạy (0 đã có), 7 tiến trình
+  50/1750  26.4 phút còn lại
+  100/1750  24.5 phút còn lại
+  150/1750  23.0 phút còn lại
+  200/1750  23.5 phút còn lại
+  250/1750  22.7 phút còn lại
+  300/1750  22.3 phút còn lại
+  350/1750  23.3 phút còn lại
+  400/1750  23.7 phút còn lại
+  450/1750  24.4 phút còn lại
+  500/1750  22.9 phút còn lại
+  550/1750  21.6 phút còn lại
+  600/1750  20.6 phút còn lại
+  650/1750  19.1 phút còn lại
+  700/1750  18.0 phút còn lại
+  750/1750  16.8 phút còn lại
+  800/1750  16.0 phút còn lại
+  850/1750  15.0 phút còn lại
+  900/1750  14.1 phút còn lại
+  950/1750  13.1 phút còn lại
+  1000/1750  12.7 phút còn lại
+  1050/1750  12.1 phút còn lại
+  1100/1750  11.4 phút còn lại
+  1150/1750  10.6 phút còn lại
+  1200/1750  9.9 phút còn lại
+  1250/1750  9.3 phút còn lại
+  1300/1750  8.5 phút còn lại
+  1350/1750  7.7 phút còn lại
+  1400/1750  6.7 phút còn lại
+  1450/1750  5.7 phút còn lại
+  1500/1750  4.7 phút còn lại
+  1550/1750  3.7 phút còn lại
+  1600/1750  2.8 phút còn lại
+  1650/1750  1.8 phút còn lại
+  1700/1750  0.9 phút còn lại
+  1750/1750  0.0 phút còn lại
+XONG revision
+timing: 150 lượt cần chạy (0 đã có), 1 tiến trình
+  50/150  6.2 phút còn lại
+  100/150  3.6 phút còn lại
+  150/150  0.0 phút còn lại
+XONG timing
+2026-10-29 12:54:06 ALL DONE

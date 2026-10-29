@@ -1,0 +1,115 @@
+2026-10-29 07:16:03 START main
+main: 1500 lượt cần chạy (0 đã có), 7 tiến trình
+  50/1500  22.2 phút còn lại
+  100/1500  20.3 phút còn lại
+  150/1500  18.6 phút còn lại
+  200/1500  18.1 phút còn lại
+  250/1500  16.9 phút còn lại
+  300/1500  16.5 phút còn lại
+  350/1500  16.4 phút còn lại
+  400/1500  16.0 phút còn lại
+  450/1500  15.4 phút còn lại
+  500/1500  14.7 phút còn lại
+  550/1500  14.0 phút còn lại
+  600/1500  13.3 phút còn lại
+  650/1500  12.9 phút còn lại
+  700/1500  12.4 phút còn lại
+  750/1500  11.8 phút còn lại
+  800/1500  11.2 phút còn lại
+  850/1500  10.5 phút còn lại
+  900/1500  9.8 phút còn lại
+  950/1500  8.9 phút còn lại
+  1000/1500  7.9 phút còn lại
+  1050/1500  7.1 phút còn lại
+  1100/1500  6.2 phút còn lại
+  1150/1500  5.4 phút còn lại
+  1200/1500  4.5 phút còn lại
+  1250/1500  3.7 phút còn lại
+  1300/1500  2.9 phút còn lại
+  1350/1500  2.2 phút còn lại
+  1400/1500  1.4 phút còn lại
+  1450/1500  0.7 phút còn lại
+  1500/1500  0.0 phút còn lại
+XONG main
+2026-10-29 07:37:12 START robust
+robust: 2250 lượt cần chạy (0 đã có), 7 tiến trình
+  50/2250  29.8 phút còn lại
+  100/2250  27.7 phút còn lại
+  150/2250  25.5 phút còn lại
+  200/2250  24.8 phút còn lại
+  250/2250  23.8 phút còn lại
+  300/2250  23.3 phút còn lại
+  350/2250  22.4 phút còn lại
+  400/2250  21.6 phút còn lại
+  450/2250  21.2 phút còn lại
+  500/2250  20.8 phút còn lại
+  550/2250  20.3 phút còn lại
+  600/2250  20.2 phút còn lại
+  650/2250  20.1 phút còn lại
+  700/2250  20.2 phút còn lại
+  750/2250  20.0 phút còn lại
+  800/2250  19.5 phút còn lại
+  850/2250  19.0 phút còn lại
+  900/2250  18.6 phút còn lại
+  950/2250  19.3 phút còn lại
+  1000/2250  19.5 phút còn lại
+  1050/2250  20.4 phút còn lại
+  1100/2250  19.8 phút còn lại
+  1150/2250  19.4 phút còn lại
+  1200/2250  18.6 phút còn lại
+  1250/2250  17.9 phút còn lại
+  1300/2250  17.1 phút còn lại
+  1350/2250  16.2 phút còn lại
+  1400/2250  15.1 phút còn lại
+  1450/2250  14.0 phút còn lại
+  1500/2250  13.0 phút còn lại
+  1550/2250  12.0 phút còn lại
+  1600/2250  11.0 phút còn lại
+  1650/2250  10.1 phút còn lại
+  1700/2250  9.1 phút còn lại
+  1750/2250  8.2 phút còn lại
+  1800/2250  7.3 phút còn lại
+  1850/2250  6.5 phút còn lại
+  1900/2250  5.6 phút còn lại
+  1950/2250  4.8 phút còn lại
+  2000/2250  3.9 phút còn lại
+  2050/2250  3.1 phút còn lại
+  2100/2250  2.3 phút còn lại
+  2150/2250  1.5 phút còn lại
+  2200/2250  0.8 phút còn lại
+  2250/2250  0.0 phút còn lại
+XONG robust
+2026-10-29 08:11:25 START ablation
+ablation: 1500 lượt cần chạy (0 đã có), 7 tiến trình
+  50/1500  21.1 phút còn lại
+  100/1500  19.3 phút còn lại
+  150/1500  17.8 phút còn lại
+  200/1500  17.1 phút còn lại
+  250/1500  16.2 phút còn lại
+  300/1500  15.5 phút còn lại
+  350/1500  16.1 phút còn lại
+  400/1500  16.5 phút còn lại
+  450/1500  16.3 phút còn lại
+  500/1500  16.2 phút còn lại
+  550/1500  16.0 phút còn lại
+  600/1500  15.6 phút còn lại
+  650/1500  15.5 phút còn lại
+  700/1500  15.2 phút còn lại
+  750/1500  14.8 phút còn lại
+  800/1500  14.2 phút còn lại
+  850/1500  13.6 phút còn lại
+  900/1500  12.7 phút còn lại
+  950/1500  11.4 phút còn lại
+  1000/1500  10.1 phút còn lại
+  1050/1500  9.0 phút còn lại
+  1100/1500  7.8 phút còn lại
+  1150/1500  6.7 phút còn lại
+  1200/1500  5.7 phút còn lại
+  1250/1500  4.7 phút còn lại
+  1300/1500  3.7 phút còn lại
+  1350/1500  2.7 phút còn lại
+  1400/1500  1.8 phút còn lại
+  1450/1500  0.9 phút còn lại
+  1500/1500  0.0 phút còn lại
+XONG ablation
+2026-10-29 08:37:34 ALL DONE

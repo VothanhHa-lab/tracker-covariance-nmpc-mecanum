@@ -1,0 +1,245 @@
+"""Macro LaTeX cho nghiên cứu mô phỏng: ../paper_sensors/tables/sim_macros.tex.
+
+Nguồn: results/sim_summary.json (analyze_sim.py), results/sim_*.meta.json, config/simstudy.yaml.
+Thiếu → \\TBD{}. Từ chối dữ liệu có cờ synthetic (dữ liệu kiểm thử đường ống).
+"""
+import argparse
+import json
+import math
+import pathlib
+import sys
+
+import yaml
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+from common import RESULTS, ROOT  # noqa: E402
+from make_macros import Macros  # noqa: E402
+
+METH = {"cov": "Cov", "fixed": "Fixed", "heuristic": "Heur", "ccconst": "Const"}
+METH3 = {k: METH[k] for k in ("cov", "fixed", "heuristic")}   # các chiến dịch robust/ablation chỉ có 3 bộ
+SCEN = {"all": "All", "H1_crossing": "HA", "H2_head_on": "HB", "H3_narrow": "HC", "H4_occlusion": "HD", "H5_side": "HE"}
+COND = {"noise2": "Noise", "delay15": "Delay", "nonreactive": "Nonreact"}
+class SimMacros(Macros):
+    """Như Macros, nhưng in dấu trừ toán học và bỏ dấu của số 0 (vd. -0.00 → 0.00)."""
+
+    def add(self, name, value, fmt="{:.2f}"):
+        if isinstance(value, (int, float)) and value is not None and math.isfinite(value):
+            t = fmt.format(value)
+            if float(t) == 0:
+                t = t.lstrip("+-")
+            elif t.startswith("-"):
+                t = r"\ensuremath{-}" + t[1:]
+            value = t
+        super().add(name, value, fmt)
+
+
+REV = {"cov": "Cov", "covcal": "Cal", "fixed": "FixA", "fix045": "FixB", "fix060": "FixC", "fix075": "FixD",
+       "heuristic": "Heur", "ccconst": "Const"}
+ABL = {"nocomp": "Nocomp", "lidar_only": "Lidar", "cantelli": "Cant", "cov_nominal": "Nom"}
+
+
+def pct(v):
+    return None if v is None or (isinstance(v, float) and not math.isfinite(v)) else 100 * v
+
+
+def add_summary(M, p, s, full=True):
+    g = lambda *k: _g(s, *k)  # noqa: E731
+    M.add(p + "N", g("n"), "{:d}")
+    sc = g("success")
+    M.add(p + "Succ", pct(sc[0]) if sc else None, "{:.0f}")
+    M.add(p + "SuccLo", pct(sc[1]) if sc else None, "{:.0f}")
+    M.add(p + "SuccHi", pct(sc[2]) if sc else None, "{:.0f}")
+    M.add(p + "ContA", g("contact_active", "k"), "{:d}")
+    M.add(p + "ContP", g("contact_passive", "k"), "{:d}")
+    M.add(p + "Wall", g("wall_contact", "k"), "{:d}")
+    M.add(p + "Timeout", g("timeout", "k"), "{:d}")
+    ub = g("contact_active", "ub0")
+    M.add(p + "ContAUB", pct(ub) if ub is not None else (pct(g("contact_active", "ci")[1]) if g("contact_active", "ci") else None), "{:.1f}")
+    for key, nm, f in (("clearance", "Clear", "{:.2f}"), ("zone", "Zone", "{:.2f}"), ("time_success", "Time", "{:.1f}")):
+        v = g(key)
+        M.add(p + nm, v[0] if v else None, f)
+        M.add(p + nm + "Lo", v[1] if v else None, f)
+        M.add(p + nm + "Hi", v[2] if v else None, f)
+    M.add(p + "ClearLow", g("clearance_p05"), "{:.2f}")
+    for h, nm in (("0.0", "CovZ"), ("0.5", "CovH"), ("1.0", "CovO")):
+        v = g(f"cov_{h}")
+        M.add(p + nm, pct(v[0]) if v else None, "{:.1f}")
+        if h == "1.0":
+            M.add(p + nm + "Lo", pct(v[1]) if v else None, "{:.1f}")
+            M.add(p + nm + "Hi", pct(v[2]) if v else None, "{:.1f}")
+    if full:
+        j = g("jerk")
+        M.add(p + "Jerk", j[0] if j else None, "{:.2f}")
+        M.add(p + "SolveP", g("solve_p95_median"), "{:.0f}")
+        M.add(p + "SolveMax", g("solve_max"), "{:.0f}")
+        M.add(p + "Guard", g("guard_runs"), "{:d}")
+        M.add(p + "Slack", g("slack_median"), "{:.2f}")
+
+
+def _g(d, *keys):
+    for k in keys:
+        if d is None or k not in d:
+            return None
+        d = d[k]
+    return d
+
+
+def add_pair(M, p, v):
+    for key, nm, f in (("min_clearance", "Clear", "{:+.2f}"), ("zone_time", "Zone", "{:+.2f}"),
+                       ("time_both_success", "Time", "{:+.1f}"), ("success", "Succ", "{:+.1f}")):
+        x = _g(v, key)
+        sc = 100 if key == "success" else 1
+        M.add(p + nm, None if x is None else sc * x[0], f)
+        M.add(p + nm + "Lo", None if x is None else sc * x[1], f)
+        M.add(p + nm + "Hi", None if x is None else sc * x[2], f)
+        M.add(p + nm + "N", None if x is None else x[3], "{:d}")
+
+
+def build():
+    M = SimMacros()
+    M.lines[0] = "% Sinh tự động bởi pu_nmpc/tools/make_sim_macros.py — KHÔNG sửa tay"
+    ss = yaml.safe_load((ROOT / "config" / "simstudy.yaml").read_text())
+    v = lambda sec, k: ss[sec][k]["value"]  # noqa: E731
+    ro, li, ca, pe, sf = ss["robot"], ss["lidar"], ss["camera"], ss["pedestrian"], ss["social_force"]
+    M.add("SimFootL", v("robot", "footprint")[0]); M.add("SimFootW", v("robot", "footprint")[1])
+    M.add("SimMass", v("robot", "mass"), "{:.0f}"); M.add("SimWheelR", v("robot", "wheel_radius"))
+    M.add("SimVmax", v("robot", "v_max"), "{:.1f}"); M.add("SimWmax", v("robot", "omega_max"), "{:.1f}")
+    M.add("SimRadius", v("robot", "radius")); M.add("SimLx", v("robot", "lx")); M.add("SimLy", v("robot", "ly"))
+    M.add("SimWheelMax", v("robot", "v_max") / v("robot", "wheel_radius"), "{:.0f}")
+    tm = v("robot", "tau_model"); tt = v("robot", "tau_true_range")
+    M.add("SimTauModel", f"{tm[0]:.2f}, {tm[1]:.2f}, {tm[2]:.2f}"); M.add("SimTauLo", tt[0]); M.add("SimTauHi", tt[1])
+    M.add("SimActDelay", 1e3 * v("robot", "actuation_delay"), "{:.0f}")
+    ls = v("localization", "std")
+    M.add("SimLocPos", 1e2 * ls[0], "{:.0f}"); M.add("SimLocYaw", math.degrees(ls[2]), "{:.1f}")
+    M.add("SimLidarRate", v("lidar", "rate"), "{:.0f}"); M.add("SimLidarRange", v("lidar", "range_max_used"), "{:.0f}")
+    M.add("SimLidarCentroid", 1e2 * v("lidar", "centroid_std"), "{:.0f}"); M.add("SimLidarBearing", v("lidar", "bearing_std_deg"), "{:.1f}")
+    M.add("SimLidarDelay", 1e3 * v("lidar", "delay"), "{:.0f}"); M.add("SimLidarPd", v("lidar", "p_detect"))
+    M.add("SimLidarClutter", v("lidar", "clutter_per_scan"), "{:.1f}")
+    M.add("SimCamRate", v("camera", "rate_detector"), "{:.0f}")
+    M.add("SimCamRmin", v("camera", "range")[0], "{:.1f}"); M.add("SimCamRmax", v("camera", "range")[1], "{:.1f}")
+    M.add("SimCamFov", v("camera", "fov_h_deg"), "{:.0f}"); M.add("SimCamDepth", 1e2 * v("camera", "depth_std_at_2m"), "{:.0f}")
+    M.add("SimCamBearing", v("camera", "bearing_std_deg"), "{:.1f}"); M.add("SimCamDelay", 1e3 * v("camera", "delay"), "{:.0f}")
+    M.add("SimCamPd", v("camera", "p_detect")); M.add("SimCamClutter", v("camera", "clutter_per_scan"))
+    M.add("SimPedSpeed", v("pedestrian", "speed_mean"), "{:.1f}"); M.add("SimOuSigma", v("pedestrian", "ou_sigma"))
+    M.add("SimOuTau", v("pedestrian", "ou_tau"), "{:.1f}")
+    M.add("SimSfA", v("social_force", "A"), "{:.1f}"); M.add("SimSfB", v("social_force", "B"), "{:.1f}")
+    M.add("SimSfLambda", v("social_force", "lambda")); M.add("SimQ", v("identified", "q_acc"), "{:.3f}")
+    meta = {}
+    for c in ("main", "robust", "ablation"):
+        f = RESULTS / f"sim_{c}.meta.json"
+        meta[c] = json.loads(f.read_text()) if f.exists() else None
+    fit = _g(meta["main"], "sensor_fit")
+    M.add("SimLidarA", None if fit is None else 1e2 * fit["lidar_ab"][0], "{:.1f}")
+    M.add("SimLidarB", None if fit is None else 1e2 * fit["lidar_ab"][1], "{:.1f}")
+    M.add("SimCamA", None if fit is None else 1e2 * fit["camera_ab"][0], "{:.1f}")
+    M.add("SimCamB", None if fit is None else 1e2 * fit["camera_ab"][1], "{:.1f}")
+    for c, nm in (("main", "Main"), ("robust", "Robust"), ("ablation", "Abl")):
+        M.add(f"Sim{nm}Runs", _g(meta[c], "n_jobs_total"), "{:d}")
+    f = RESULTS / "sim_summary.json"
+    S = json.loads(f.read_text()) if f.exists() else {}
+    syn = bool(_g(S, "provenance", "synthetic"))
+    errs = sum((_g(S, "main", k, "error", "k") or 0) for k in (S.get("main") or {}))
+    M.add("SimMainErrors", errs if S.get("main") else None, "{:d}")
+    for m, mn in METH.items():
+        for sc, sn in SCEN.items():
+            add_summary(M, f"Sim{mn}{sn}", _g(S, "main", f"{m}|{sc}"), full=(sc == "all"))
+    for b, bn in (("fixed", "Fixed"), ("heuristic", "Heur"), ("ccconst", "Const")):
+        add_pair(M, f"SimPair{bn}", _g(S, "paired_main", f"cov-{b}"))
+        for sc, sn in SCEN.items():
+            if sc == "all":
+                continue
+            x = _g(S, "paired_main_scen", f"cov-{b}|{sc}")
+            for key, nm in (("min_clearance", "Clear"), ("zone_time", "Zone")):
+                y = _g(x, key)
+                M.add(f"SimPair{bn}{sn}{nm}", None if y is None else y[0], "{:+.2f}")
+                M.add(f"SimPair{bn}{sn}{nm}Lo", None if y is None else y[1], "{:+.2f}")
+                M.add(f"SimPair{bn}{sn}{nm}Hi", None if y is None else y[2], "{:+.2f}")
+    for c, cn in COND.items():
+        for m, mn in METH3.items():
+            add_summary(M, f"SimR{cn}{mn}", _g(S, "robust", f"{c}|{m}"), full=False)
+        for b, bn in (("fixed", "Fixed"), ("heuristic", "Heur")):
+            add_pair(M, f"SimRPair{cn}{bn}", _g(S, "paired_robust", f"{c}|cov-{b}"))
+    rmax = [x["solve_max"] for x in (S.get("robust") or {}).values()]
+    M.add("SimRobustSolveMax", max(rmax) if rmax else None, "{:.0f}")
+    for a, an in ABL.items():
+        add_summary(M, f"SimA{an}", _g(S, "ablation", a), full=False)
+        if a != "cov_nominal":
+            add_pair(M, f"SimAPair{an}", _g(S, "ablation", a, "paired_vs_cov"))
+    am = RESULTS / "sim_altmain.meta.json"
+    cc = json.loads(am.read_text()).get("const_cov") if am.exists() else None
+    M.add("SimConstSigP", None if cc is None else 1e2 * math.sqrt(cc[0]), "{:.1f}")
+    M.add("SimConstSigV", None if cc is None else math.sqrt(cc[10]), "{:.2f}")
+    M.add("SimAltRuns", None if not am.exists() else json.loads(am.read_text())["n_jobs_total"], "{:d}")
+    dj = RESULTS / "drow_validation.json"
+    D = json.loads(dj.read_text()) if dj.exists() else None
+    M.add("DrScans", _g(D, "n_scans"), "{:d}")
+    M.add("DrLabels", _g(D, "n_person_labels"), "{:d}")
+    M.add("DrFiles", _g(D, "n_files"), "{:d}")
+    ra = _g(D, "recall_all")
+    for nm, i in (("", 0), ("Lo", 1), ("Hi", 2)):
+        M.add("DrRecall" + nm, None if ra is None else pct(ra[i]), "{:.1f}")
+    for key, nm in (("0.3-1", "A"), ("1-2", "B"), ("2-3", "C"), ("3-4", "D"), ("4-5", "E"), ("5-6", "F"), ("6-8", "G")):
+        v = _g(D, "recall_by_range", key)
+        M.add(f"DrRec{nm}N", _g(v, "n"), "{:d}")
+        for sfx, i in (("", 0), ("Lo", 1), ("Hi", 2)):
+            M.add(f"DrRec{nm}{sfx}", None if v is None else pct(v["ci"][i]), "{:.1f}")
+    fp = _g(D, "fp_per_scan")
+    for nm, i in (("", 0), ("Lo", 1), ("Hi", 2)):
+        M.add("DrFp" + nm, None if fp is None else fp[i], "{:.1f}")
+    M.add("DrRangeA", None if D is None else 1e2 * D["range_error"]["fit_a"], "{:.1f}")
+    M.add("DrRangeB", None if D is None else 1e2 * D["range_error"]["fit_b"], "{:.1f}")
+    M.add("DrRangeBias", None if D is None else 1e2 * D["range_error"]["bias"], "{:.1f}")
+    M.add("DrBearSd", _g(D, "bearing_error_deg", "robust_sd"), "{:.1f}")
+    # bản sửa sau phản biện
+    rv = yaml.safe_load((ROOT / "config" / "simstudy.yaml").read_text()).get("revision", {})
+    M.add("SimGamma", rv.get("cov_inflate", {}).get("value"), "{:.2f}")
+    cal = RESULTS / "calibration.json"
+    calj = json.loads(cal.read_text()) if cal.exists() else None
+    M.add("SimCalRuns", _g(calj, "n_runs"), "{:d}")
+    for h, nm in (("0.0", "Z"), ("0.5", "H"), ("1.0", "O")):
+        g = None if calj is None else calj["coverage"][h].get(str(calj["gamma"]))
+        M.add("SimCalCov" + nm, pct(g), "{:.1f}")
+    M.add("SimRevRuns", _g(meta_rev := (json.loads((RESULTS / "sim_revision.meta.json").read_text())
+                                        if (RESULTS / "sim_revision.meta.json").exists() else None), "n_jobs_total"), "{:d}")
+    for a, an in REV.items():
+        add_summary(M, f"SimV{an}", _g(S, "revision", a), full=False)
+    for a, b in [("covcal", x) for x in ("cov", "fixed", "fix045", "fix060", "fix075", "heuristic")] + \
+                [("cov", x) for x in ("fix045", "fix060", "fix075")] + [("covcal", "ccconst"), ("cov", "ccconst")]:
+        add_pair(M, f"SimVPair{REV[a]}{REV[b]}", _g(S, "paired_revision", f"{a}-{b}"))
+    for m, mn in METH.items():
+        t = _g(S, "timing", m)
+        M.add(f"SimT{mn}N", _g(t, "n"), "{:d}")
+        M.add(f"SimT{mn}Pfifty", _g(t, "p50"), "{:.0f}")
+        M.add(f"SimT{mn}Pninetyfive", _g(t, "p95"), "{:.0f}")
+        M.add(f"SimT{mn}Max", _g(t, "max"), "{:.0f}")
+        M.add(f"SimT{mn}Over", _g(t, "runs_over_period"), "{:d}")
+        M.add(f"SimT{mn}WallMed", _g(t, "wall_median"), "{:.1f}")
+        M.add(f"SimT{mn}WallOut", _g(t, "wall_outliers"), "{:d}")
+        M.add(f"SimT{mn}WallMax", _g(t, "wall_max"), "{:.1f}")
+    r1 = RESULTS / "sim_timing_run1.csv"
+    if r1.exists():
+        import pandas as pd
+        d1 = pd.read_csv(r1)
+        k = d1.wall_s.idxmax()
+        M.add("SimTOneWall", float(d1.wall_s[k]), "{:.0f}")
+        M.add("SimTOneSolve", float(d1.solve_max[k]), "{:.0f}")
+        M.add("SimTOneWallMed", float(d1.wall_s.median()), "{:.1f}")
+        M.add("SimTOneWallOut", int((d1.wall_s > 10 * d1.wall_s.median()).sum()), "{:d}")
+    else:
+        for nm in ("SimTOneWall", "SimTOneSolve", "SimTOneWallMed", "SimTOneWallOut"):
+            M.add(nm, None)
+    return M, syn
+
+
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--paper", type=pathlib.Path, required=True)
+    a = ap.parse_args()
+    M, syn = build()
+    if syn:
+        sys.exit("TỪ CHỐI: sim_summary.json có cờ synthetic.")
+    out = a.paper / "tables" / "sim_macros.tex"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(M.text())
+    n_tbd = sum(chr(92) + "TBD{}" in line for line in M.lines)
+    print(f"đã ghi {out}: {len(M.names)} macro, {n_tbd} còn TBD")

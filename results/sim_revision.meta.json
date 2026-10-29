@@ -1,0 +1,23 @@
+{
+ "kind": "simulation",
+ "synthetic": false,
+ "campaign": "revision",
+ "code": "bd7cdaa65b4e7d47",
+ "simstudy_sha": "1cf6583b50fad364",
+ "controller_sha": "5827ce9c3969c872",
+ "tracker_sha": "12753bf8fef76ff8",
+ "sensor_fit": {
+  "lidar_ab": [
+   0.013579224405176542,
+   0.023139081655516605
+  ],
+  "camera_ab": [
+   0.005,
+   0.033
+  ]
+ },
+ "n_jobs_total": 1750,
+ "machine": "arm64",
+ "started": "2026-10-29 11:57:33",
+ "finished": "2026-10-29 12:28:46"
+}

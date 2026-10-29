@@ -1,0 +1,12 @@
+# Tọa độ trong khung map của hiện trường — TO_MEASURE: đo trên bản đồ thật sau khi dựng bản đồ (P1).
+scenarios:
+  H1_crossing:   {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
+                  person: "đi cắt ngang tại x ≈ 4.5 m, xuất phát khi robot qua vạch x = 1 m (đèn hiệu)"}
+  H2_head_on:    {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
+                  person: "đi ngược chiều trong hành lang rộng TO_MEASURE m, lệch tâm 0.15 m"}
+  H3_narrow:     {waypoints: [[0.0, 0.0], [3.0, 0.0], [5.0, 0.0], [8.0, 0.0]], timeout: 45.0, goal_tol: 0.15,
+                  person: "hai người đi ngược chiều qua lối hẹp TO_MEASURE m"}
+  H4_occlusion:  {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
+                  person: "bước ra từ sau tủ tại x ≈ 4 m, cách đường đi 1.5 m"}
+  H5_side:       {waypoints: [[0.0, 0.0], [8.0, 0.0]], timeout: 40.0, goal_tol: 0.15,
+                  person: "tiếp cận từ phía bên/sau robot, ngoài FOV camera (|góc| > 60°)"}

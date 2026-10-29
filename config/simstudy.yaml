@@ -1,0 +1,54 @@
+# Cấu hình nghiên cứu mô phỏng. Mỗi tham số ghi nguồn:
+#   T5 = Bảng 5 bản thảo CA-NMPC (thông số nền tảng do nhóm tác giả cung cấp, chưa đo lại)
+#   DS = datasheet chính thức (đã tra trên trang của hãng, ngày 29/10/2026)
+#   AS = giả định (assumed) — được kiểm tra độ nhạy trong chiến dịch
+robot:
+  footprint: {value: [0.60, 0.55], source: T5}                 # m, dài × rộng
+  radius: {value: 0.41, source: "T5 (nửa đường chéo 0.60 × 0.55 m)"}
+  mass: {value: 12.0, source: T5}                               # kg (không dùng trong mô hình bậc nhất)
+  wheel_radius: {value: 0.05, source: T5}
+  lx: {value: 0.20, source: AS}
+  ly: {value: 0.22, source: AS}
+  v_max: {value: 1.0, source: T5}                               # m/s → giới hạn bánh v_max / r_w
+  omega_max: {value: 1.5, source: T5}                           # rad/s
+  tau_model: {value: [0.15, 0.15, 0.12], source: AS}            # mô hình của bộ điều khiển
+  tau_true_range: {value: [0.12, 0.25], source: AS}             # robot "thật" trong mô phỏng, ngẫu nhiên theo hạt
+  actuation_delay: {value: 0.05, source: AS}
+  body_acc_max: {value: [1.0, 1.0, 2.0], source: AS}
+localization:
+  std: {value: [0.03, 0.03, 0.01], source: AS}                  # m, m, rad (AR(1), hệ số 0.95)
+lidar:                                                          # RPLIDAR A2
+  rate: {value: 10.0, source: "DS (10 Hz, 5–15 Hz)"}
+  range_max_used: {value: 8.0, source: "AS (≤ 12 m của A2M8/A2M12, DS)"}
+  range_accuracy: {value: "1% (≤3 m), 2% (3–5 m), 2.5% (5–25 m)", source: DS}
+  centroid_std: {value: 0.05, source: "AS (dao động tâm cụm chân khi đi)"}
+  bearing_std_deg: {value: 0.5, source: "AS (độ phân giải góc 0.45° của A2M8, DS, cộng dao động tâm)"}
+  delay: {value: 0.05, source: AS}
+  p_detect: {value: 0.90, source: AS}
+  clutter_per_scan: {value: 0.3, source: AS}
+camera:                                                         # RealSense D435i
+  rate_detector: {value: 10.0, source: "AS (YOLO trên máy onboard; depth 30 fps theo DS)"}
+  range: {value: [0.3, 3.0], source: "DS (operating range ~0.3–3 m)"}
+  fov_h_deg: {value: 69.0, source: "AS (FOV ảnh màu; DS chỉ xác minh được FOV độ sâu 87°)"}
+  depth_std_at_2m: {value: 0.04, source: "AS (≈2 % tại 2 m, tăng theo bình phương khoảng cách)"}
+  bearing_std_deg: {value: 1.0, source: "AS (tâm hộp phát hiện)"}
+  delay: {value: 0.15, source: AS}
+  p_detect: {value: 0.95, source: AS}
+  clutter_per_scan: {value: 0.02, source: AS}
+pedestrian:
+  speed_mean: {value: 1.1, source: AS}
+  ou_sigma: {value: 0.10, source: AS}
+  ou_tau: {value: 1.0, source: AS}
+campaign:
+  dev_seeds: [0, 50]          # chỉ dùng để kiểm tra/pilot
+  main_seeds: [1000, 1100]    # báo cáo chính
+  robust_seeds: [2000, 2050]  # điều kiện độ bền
+  ablation_seeds: [1000, 1100]
+identified:
+  q_acc: {value: 0.022, source: "ML (fit_cv_q) trên 300 quỹ đạo người của hạt phát triển 0–49; dùng cho cả bộ bám và dự báo"}
+social_force:
+  A: {value: 3.0, source: "AS (cường độ, m/s²); dạng hàm theo Helbing & Molnár"}
+  B: {value: 0.5, source: "AS (tầm, m)"}
+  lambda: {value: 0.35, source: "AS (bất đẳng hướng)"}
+revision:
+  cov_inflate: {value: 1.5, source: "calibrate_inflation.py on dev seeds 0-9 (sim_devcal.csv, 50 runs)"}

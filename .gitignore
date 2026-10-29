@@ -1,0 +1,9 @@
+# Dữ liệu ngoài (DROW v2, ~1,2 GB): tải lại theo README
+external_data/
+__pycache__/
+*.pyc
+.DS_Store
+.pytest_cache/
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/

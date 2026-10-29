@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pu_nmpc_core"
+version = "0.1.0"
+description = "Perception-uncertainty-aware NMPC for a Mecanum robot (core library, ROS-independent)"
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy", "casadi>=3.6", "pyyaml"]
+
+[project.optional-dependencies]
+analysis = ["pandas", "matplotlib", "rosbags>=0.9"]
+
+[tool.setuptools]
+packages = ["pu_nmpc_core"]

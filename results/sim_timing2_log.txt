@@ -1,0 +1,6 @@
+timing: 150 lượt cần chạy (0 đã có), 1 tiến trình
+  50/150  36.8 phút còn lại
+  100/150  17.3 phút còn lại
+  150/150  0.0 phút còn lại
+XONG timing
+2026-10-29 13:45:08 ALL DONE

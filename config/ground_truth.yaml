@@ -1,0 +1,14 @@
+# Hệ ground truth camera trần. TO_MEASURE toàn bộ: vị trí thẻ mốc đo bằng thước/máy đo khoảng cách laser.
+ground_truth:
+  floor_tag_size: 0.20          # m, cạnh thẻ mốc (phần đen)
+  floor_tags:                   # id: [x, y, yaw] trong khung map
+    0: [0.0, 0.0, 0.0]
+    1: [4.0, 0.0, 0.0]
+    2: [8.0, 0.0, 0.0]
+    3: [0.0, 2.0, 0.0]
+    4: [8.0, 2.0, 0.0]
+  targets:
+    10: {kind: robot, height: 0.80, yaw_offset: 0.0}
+    20: {kind: person, participant: 1, height: 1.45}   # thẻ trên mũ/vai; đo chiều cao cho từng người
+    21: {kind: person, participant: 2, height: 1.45}
+    22: {kind: person, participant: 3, height: 1.45}

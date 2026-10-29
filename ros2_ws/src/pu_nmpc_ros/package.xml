@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>pu_nmpc_ros</name>
+  <version>0.1.0</version>
+  <description>ROS 2 nodes: LiDAR/RGB-D person detection, asynchronous fusion tracker, NMPC, ground truth, trial management</description>
+  <maintainer email="maintainer@example.com">TBD</maintainer>
+  <license>BSD-3-Clause</license>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>pu_nmpc_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>message_filters</exec_depend>
+  <exec_depend>ros2bag</exec_depend>
+  <export><build_type>ament_python</build_type></export>
+</package>

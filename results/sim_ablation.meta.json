@@ -1,0 +1,23 @@
+{
+ "kind": "simulation",
+ "synthetic": false,
+ "campaign": "ablation",
+ "code": "672aa3717c97b8cb",
+ "simstudy_sha": "44783b41c653ecbd",
+ "controller_sha": "5827ce9c3969c872",
+ "tracker_sha": "12753bf8fef76ff8",
+ "sensor_fit": {
+  "lidar_ab": [
+   0.013579224405176542,
+   0.023139081655516605
+  ],
+  "camera_ab": [
+   0.005,
+   0.033
+  ]
+ },
+ "n_jobs_total": 1500,
+ "machine": "arm64",
+ "started": "2026-10-29 08:11:26",
+ "finished": "2026-10-29 08:37:33"
+}

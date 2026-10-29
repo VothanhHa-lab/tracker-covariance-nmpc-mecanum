@@ -1,0 +1,15 @@
+identified_from:
+- /private/tmp/claude-501/-Users-vothanhha-Desktop-0-VO-THANH-HA-0-0CONGVIEC-0-1-PAPER-0-1-N-m-2026--B-I-B-O-0-Duong-Anh-Tuan-0-Nguy-n-Thu--V-n/f854e1f1-172b-4da7-8a48-a2785ac06d50/scratchpad/synth/N01/csv
+sensors:
+  camera:
+    fov_half_deg: 43.5
+    r_max: 6.0
+    sigma_b: 0.02031865752707379
+    sigma_r_a: 0.05076010951769889
+    sigma_r_b: 0.031673375819682964
+  lidar:
+    fov_half_deg: null
+    r_max: 8.0
+    sigma_b: 0.010722129863753413
+    sigma_r_a: 0.019936455130042934
+    sigma_r_b: 0.01141128492783464

@@ -1,0 +1,12 @@
+tracker:
+  q_acc: 0.5            # TO_IDENTIFY: fit_cv_q trên quỹ đạo GT của người (P2), chốt trước chiến dịch
+  lag: 0.20             # ≥ p99 trễ cảm biến đo được ở P4
+  gate_chi2: 9.21
+  init_vel_std: 1.0
+  confirm_hits: 3
+  confirm_window: 1.0
+  delete_tentative: 0.5
+  delete_confirmed: 1.5
+  max_pos_std: 1.5
+  birth_sensors: [lidar, camera]
+  merge_chi2: 5.99

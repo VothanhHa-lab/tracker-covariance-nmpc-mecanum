@@ -1,0 +1,23 @@
+altmain: 500 lượt cần chạy (0 đã có), 7 tiến trình
+  50/500  7.2 phút còn lại
+  100/500  6.3 phút còn lại
+  150/500  5.4 phút còn lại
+  200/500  4.6 phút còn lại
+  250/500  4.1 phút còn lại
+  300/500  3.4 phút còn lại
+  350/500  2.4 phút còn lại
+  400/500  1.6 phút còn lại
+  450/500  0.8 phút còn lại
+  500/500  0.0 phút còn lại
+XONG altmain
+altrev: 250 lượt cần chạy (0 đã có), 7 tiến trình
+  50/250  2.6 phút còn lại
+  100/250  2.2 phút còn lại
+  150/250  1.7 phút còn lại
+  200/250  0.8 phút còn lại
+  250/250  0.0 phút còn lại
+XONG altrev
+alttiming: 50 lượt cần chạy (0 đã có), 1 tiến trình
+  50/50  0.0 phút còn lại
+XONG alttiming
+2026-10-29 13:07:59 ALL DONE

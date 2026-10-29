@@ -1,0 +1,15 @@
+# Mô hình nhiễu cực của cảm biến phát hiện người. TO_IDENTIFY: tools/analyze_sensor_noise.py ghi đè tệp này
+# (bản sinh tự động có khóa `identified_from`). Giá trị dưới đây chỉ để chạy thử phần mềm.
+sensors:
+  lidar:
+    sigma_r_a: 0.03
+    sigma_r_b: 0.01
+    sigma_b: 0.01
+    fov_half_deg: null       # 360°
+    r_max: 8.0
+  camera:
+    sigma_r_a: 0.05
+    sigma_r_b: 0.03
+    sigma_b: 0.02
+    fov_half_deg: 43.5       # D435i màu: HFOV ≈ 87° theo datasheet — TO_MEASURE vùng phát hiện hiệu dụng
+    r_max: 6.0
